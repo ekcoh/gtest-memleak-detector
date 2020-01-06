@@ -53,6 +53,7 @@ endif(${PROJECT_NAME_UCASE}_DOWNLOAD_GTEST)
 # library
 ###################################################################################################
 
+# We want to build this as static to use debug heap
 add_library(${PROJECT_NAME} STATIC
 	"include/gtest_memleak_detector/gtest_memleak_detector.h"
 )

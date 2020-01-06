@@ -16,5 +16,3 @@ enable_testing()
 add_test(NAME ${PROJECT_NAME}_example_01_getting_started 
 	COMMAND ${PROJECT_NAME}_example_01_getting_started
 )
-
-# TODO If build as shared library, copy library to current binary folder

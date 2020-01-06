@@ -2,17 +2,10 @@
 // This file is subject to the license terms in the LICENSE file 
 // found in the root directory of this distribution.
 
-//
-// Policy Extensions for the Google C++ Testing and Mocking Framework (Google Test).
-//
-// This header file defines the public API for Google Test Policy Extensions. 
-// It should be included by any test program that uses Google Test Policy Extension.
-//
-// Code style used is same as Google Test source code to make source code blend.
-
 #include "memory_leak_detector_listener_impl.h"
 
 #include <fstream>
+#include <exception>
 #include <Windows.h>
 
 #ifndef GTEST_MEMLEAK_DETECTOR_FILENAME
@@ -25,67 +18,184 @@
 
 #ifdef GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE
 
+// Constants
 const long gtest_memleak_detector::MemoryLeakDetectorListener::Impl::no_break_alloc = -1;
 
+// Locals
 long gtest_memleak_detector::MemoryLeakDetectorListener::Impl::parsed_alloc_no = -1;
 
-int gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Impl::output_redirect(
-	int, char* szMsg, int*)
-{ 
-	const auto start = strchr(szMsg, '{');
-	if (start != nullptr)
-	{
-		const auto stop = strchr(start, '}');
-		if (stop != nullptr)
-		{
-			const auto len = stop - start - 1;
-			if (len > 0)
-			{
-				char buffer[32];
-				strncpy_s(buffer, start + 1, len);
-				auto allocation_no = strtol(buffer, nullptr, 10);
-				if (allocation_no == LONG_MIN || allocation_no == LONG_MAX)
-					allocation_no = 0L;
-				parsed_alloc_no = allocation_no;
-			}
-		}
-	}
+// Translation unit globals
+namespace {
+    //_CRT_REPORT_HOOK chained_report_hook = nullptr;
 
-	std::cerr << szMsg; 
-	return 1; // TRUE
+    class scoped_crt_report_hook
+    {
+    public:
+        explicit scoped_crt_report_hook(_CRT_REPORT_HOOK hook) noexcept
+            : hook_(hook), preinstalled_hook_(_CrtGetReportHook())
+        { 
+            if (hook)
+                _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, hook);
+        }
+
+        ~scoped_crt_report_hook() noexcept
+        {
+            if (hook_) 
+                uninstall(hook_);
+            if (preinstalled_hook_) 
+                install(preinstalled_hook_);
+        }
+    private:
+        static void install(_CRT_REPORT_HOOK hook) noexcept
+        {
+            if (hook)
+                set_hook(_CRT_RPTHOOK_INSTALL, hook);
+        }
+
+        static void uninstall(_CRT_REPORT_HOOK hook) noexcept
+        {
+            if (hook) 
+                set_hook(_CRT_RPTHOOK_REMOVE, hook);
+        }
+
+        static void set_hook(int mode, _CRT_REPORT_HOOK hook)
+        {
+            if (_CrtSetReportHook2(mode, hook) == -1)
+            {
+                if (mode == _CRT_RPTHOOK_INSTALL)
+                    GTEST_FATAL_FAILURE_("Failed to install CRT RPT hook for memory leak detection");
+                else
+                    GTEST_FATAL_FAILURE_("Failed to uninstall CRT RPT hook for memory leak detection");
+            }
+        }
+
+        _CRT_REPORT_HOOK hook_;
+        _CRT_REPORT_HOOK preinstalled_hook_;
+    };
+}
+
+std::string gtest_memleak_detector::MemoryLeakDetectorListener::Impl::describe_test(const ::testing::TestInfo& test_info)
+{
+    std::stringstream ss;
+    ss << test_info.test_suite_name();
+    ss << "::";
+    ss << test_info.name();
+    if (test_info.value_param() != nullptr)
+    {
+        ss << '/';
+        ss << test_info.value_param();
+    }
+    if (test_info.type_param() != nullptr)
+    {
+        ss << '/';
+        ss << test_info.type_param();
+    }
+    return ss.str();
+}
+
+bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::try_parse_alloc_no(long& dst, const char* str) noexcept
+{
+    assert(str);
+
+    const auto start = strchr(str, '{');
+    if (nullptr == start)
+        return false; // failed (format error)
+
+    const auto stop = strchr(start, '}');
+    if (nullptr == stop)
+        return false; // failed (format error)
+
+    const auto len = stop - start - 1;
+    if (len <= 0 || len > 10)
+    {   // alloc_no is 32-bit (long) on Windows
+        return false; // failed (range error)
+    }
+
+    // Parse allocation no as 32-bit integer.
+    char buffer[11]; // 10 + termination char
+    strncpy_s(buffer, start + 1, len);
+    auto allocation_no = strtol(buffer, nullptr, 10);
+    if (allocation_no == LONG_MIN || allocation_no == LONG_MAX)
+        return false; // failed
+
+    dst = allocation_no;
+    return true; // success
+}
+
+bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::read_and_compare(
+    int argc, char** argv)
+{
+    assert(in_);
+
+    using st_size_type = decltype(file_info_.st_size);
+    using st_time_type = decltype(file_info_.st_mtime);
+
+    st_size_type st_size = 0;
+    st_time_type st_mtime = 0;
+
+    in_ >> st_size;
+    if (st_size != file_info_.st_size)
+        return false; // different file size (TODO Remove?)
+
+    in_ >> st_mtime; 
+    if (st_mtime != file_info_.st_mtime)
+        return false; // different modification data
+
+    int prev_argc;
+    in_ >> prev_argc;
+    if (prev_argc != argc)
+        return false; // different number of args
+
+    std::string prev_arg;
+    in_ >> std::ws; // discard white-space prior to getline
+    for (auto i = 0; i < argc; ++i)
+    {
+        std::getline(in_, prev_arg);
+        if (0 != strcmp(prev_arg.c_str(), argv[i]))
+            return false; // different arg
+    }
+
+    return true; // successfully read and equal
 }
 
 gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Impl(int argc, char** argv) :
 	pre_state_{ 0 },
-	output_redirect_hook_(output_redirect),
 	break_alloc_(no_break_alloc)
 {
+    /*TCHAR szFileName[MAX_PATH];
+    GetModuleFileName(NULL, szFileName, MAX_PATH)
+*/
 	if (argc > 0)
 	{
+        // Get file info
 		if (_stat(argv[0], &file_info_) != 0)
 			memset(&file_info_, 0, sizeof(struct _stat));
-		//std::ifstream bin(path);
-		//bin.close();
 	}
 
-	out_.open(GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME);
+    // Write timestamps and arguments to file.
+    // This is needed to determine if a consecutive test run has the same configuration
+    out_.open(GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME);
+    out_ << file_info_.st_size << '\n' 
+         << file_info_.st_mtime << '\n';
+    out_ << argc << '\n';
+    for (auto i = 0; i < argc; ++i)
+    {
+        const auto arg = argv[i];
+        out_ << arg << '\n';
+    }
 
-	out_ << file_info_.st_size << '\n' << file_info_.st_mtime << '\n';
-	for (auto i = 0; i < argc; ++i)
-		out_ << argv[0] << '\n';
-	//out_ << test.test_suite_to_run_count() << '\n';
-	//out_ << test.test_case_to_run_count() << '\n';
+    if (IsDebuggerPresent())
+    {
+        in_.open(GTEST_MEMLEAK_DETECTOR_FILENAME);
+        if (in_)
+        {
+            if (!read_and_compare(argc, argv))
+                in_.close(); // failed or invalid
+        }
+    }
 
-	// Show warning message in case break_alloc is set to prevent 
-	// accidental commits with break alloc set.
-	if (IsDebuggerPresent() && break_alloc_ != no_break_alloc)
-	{
-		std::cerr << "WARNING: Memory leak detection allocation break is set."
-			"This should only be set while debugging memory leaks." << std::endl;
-	}
-
-	// Turn on debug allocation 
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	// Turn on debug allocation
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); 
 }
 
 gtest_memleak_detector::MemoryLeakDetectorListener::Impl::~Impl()
@@ -94,30 +204,31 @@ gtest_memleak_detector::MemoryLeakDetectorListener::Impl::~Impl()
 }
 
 void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestStart(
-	const ::testing::TestInfo& /*test_info*/)
+	const ::testing::TestInfo& test_info)
 {
+    parsed_alloc_no = no_break_alloc;
 	_CrtMemCheckpoint(&pre_state_);
 
-	// Set to number reported in braces in leak failure report, e.g.
-	// ... {2522} normal block at 0x036B3C18, 4 bytes long. ...
-	// #warning Memory debugging break-point active
-	if (IsDebuggerPresent() && break_alloc_ != no_break_alloc)
-	{
-		_CrtSetBreakAlloc(break_alloc_);
-		break_alloc_ = no_break_alloc;
-	}
-}
+    if (!IsDebuggerPresent() || !in_)
+        return;
 
-//int AllocationHook(int allocType, void *userData, size_t size,
-//	int blockType, long requestNumber,
-//	const unsigned char *filename, int lineNumber)
-//{
-//	//if (allocType == _HOOK_FREE)
-//	//{
-//	//	
-//	//}
-//	return 1; // TRUE
-//}
+    std::string test_description;
+    in_ >> break_alloc_;
+    in_ >> test_description;
+
+    const auto description = describe_test(test_info);
+    if (description != test_description)
+    {
+        in_.close(); // invalidate
+        return;
+    }
+    
+    if (break_alloc_ != no_break_alloc)
+    {   // Set allocation no to break on
+        _CrtSetBreakAlloc(break_alloc_);
+        break_alloc_ = no_break_alloc;
+    }
+}
 
 void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestEnd(
 	const ::testing::TestInfo& test_info)
@@ -125,83 +236,73 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestEnd(
 	// Avoid adding extra asserts if test is not passing anyway and the failing logic is the main failure.
 	// Another reason to do this is that gtest report false positives when reporting assertion failures
 	// due to memory allocation within gtest framework (bad).
-	if (!test_info.result()->Passed())
-		return;
+    const auto test_passed = test_info.result()->Passed();
 
-	// Create memory checkpoint
-	_CrtMemState post_state;
-	_CrtMemCheckpoint(&post_state);
+	// Create memory checkpoint post test and compute diff to detect leak(s)
+    auto leak_detected = false;
+    _CrtMemState mem_diff;
+    if (test_passed)
+    {
+        _CrtMemState post_state;
+        _CrtMemCheckpoint(&post_state);
+        leak_detected = _CrtMemDifference(&mem_diff, &pre_state_, &post_state);
+        if (leak_detected)
+        {
+            // Dump objects and statistics via redirect hook
+            // This indirectly sets parsed_alloc_no
+            std::cerr << "Failure: Memory leak detected.\n\n";
+            
+            // Make scoped RPT hook since we only need to capture statistics
+            static auto preinstalled_hook = _CrtGetReportHook();
+            static auto report_cb = [](int reportType, char* message, int* returnValue) -> int {
+                auto result = TRUE;
+                if (preinstalled_hook)
+                    result = preinstalled_hook(reportType, message, returnValue);
+                if (parsed_alloc_no != no_break_alloc)
+                    return result; // already parsed on earlier invocation
+                if (message)
+                    try_parse_alloc_no(parsed_alloc_no, message);
+                fprintf(stderr, message); // avoid std::cerr since CRT callback
+                return result;
+            };
 
-	//const auto test_allocation_count = post_state_.lTotalCount - pre_state_.lTotalCount;
-	//memory_was_allocated_ = test_allocation_count != 0;
+            // Replace preinstalled hook with lambda and dump statistics
+            _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, report_cb);
+            _CrtMemDumpAllObjectsSince(&pre_state_);
+            _CrtMemDumpStatistics(&mem_diff);
 
-	// Compute a diff from pre/post test callbacks and dump statistics for that scope only if leak is detected
-	_CrtMemState mem_diff;
-	const auto leak_detected = _CrtMemDifference(&mem_diff, &pre_state_, &post_state);
-	if (!leak_detected)
-		return;
+            // Restore previous (preinstalled) hook
+            if (preinstalled_hook)
+                _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, preinstalled_hook);
+        }
+    }
 
-	// Dump objects and statistics via redirect hook
-	std::cerr << "Failure: Memory leak detected.\n\n";
-	_CrtMemDumpAllObjectsSince(&pre_state_);
-	_CrtMemDumpStatistics(&mem_diff);
-
-	// Parse allocation id from dump
-	if (parsed_alloc_no != 0)
+	// Write test information to output file
+	if (out_)
 	{
-		out_ << parsed_alloc_no;
-		out_ << ",";
-		out_ << test_info.test_suite_name();
-		out_ << "::";
-		out_ << test_info.name();
-		if (test_info.value_param() != nullptr)
-		{
-			out_ << '/';
-			out_ << test_info.value_param();
-		}
-		if (test_info.type_param() != nullptr)
-		{
-			out_ << '/';
-			out_ << test_info.type_param();
-		}
-		out_ << '\n';
+        out_ << parsed_alloc_no << '\n';		
+        out_ << describe_test(test_info) << '\n';
 	}
 
-	// Assertion that will fail any test leaking memory
-	GTEST_NONFATAL_FAILURE_("Memory leak detected");
+    if (leak_detected)
+        GTEST_NONFATAL_FAILURE_("Memory leak detected");
 }
 
 void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestProgramStart(
-	const ::testing::UnitTest& test)
+	const ::testing::UnitTest& /*test*/)
 {
-	const auto test_count = test.total_test_count();
-	//database_.reserve(test_count);
-
-
-	// TODO Write configuration and binary information, debugger attached or not seems to result in different allocations?!
-
-	if (IsDebuggerPresent())
-	{
-		in_.open(GTEST_MEMLEAK_DETECTOR_FILENAME);
-		in_ >> break_alloc_;
-	}
-
-	_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, output_redirect_hook_);
+	// Empty for now
 }
 
 void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestProgramEnd(
 	const ::testing::UnitTest& /*test*/)
 {
-	_CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, output_redirect_hook_);
-
+    in_.close();
 	out_.close();
-	in_.close();
 
-	// Remove previous file
 	std::remove(GTEST_MEMLEAK_DETECTOR_FILENAME);
-
-	// Rename temp output file to be input file for next run
-	std::rename(GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME, GTEST_MEMLEAK_DETECTOR_FILENAME);
+	std::rename(GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME, 
+        GTEST_MEMLEAK_DETECTOR_FILENAME);
 }
 
 #endif // GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE

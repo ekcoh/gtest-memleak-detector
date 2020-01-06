@@ -2,13 +2,21 @@
 // This file is subject to the license terms in the LICENSE file 
 // found in the root directory of this distribution.
 
-//
-// Policy Extensions for the Google C++ Testing and Mocking Framework (Google Test).
-//
-// This header file defines the public API for Google Test Policy Extensions. 
-// It should be included by any test program that uses Google Test Policy Extension.
-//
-// Code style used is same as Google Test source code to make source code blend.
+#ifdef INCLUDE_CRT
+
+// Memory debugging tools (MSVC only)
+#if defined(_DEBUG) && defined(_MSC_VER)
+
+// CRT debug tools
+//#ifndef _CRTDBG_MAP_ALLOC
+#define _CRTDBG_MAP_ALLOC
+//#endif // _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+
+#endif // defined(_DEBUG) && defined(_MSC_VER)
+
+#endif // INCLUDE_CRT
 
 #include <gtest/gtest.h>
 
