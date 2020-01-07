@@ -31,7 +31,7 @@ int main(int argc, char **argv) \
   return RUN_ALL_TESTS(); \
 }
 
-namespace gtest_memleak_detector {
+namespace gtest_memleak_detector { 
 
 ///////////////////////////////////////////////////////////////////////////////
 // MemoryLeakDetectorListener

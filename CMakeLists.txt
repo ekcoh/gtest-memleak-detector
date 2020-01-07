@@ -25,19 +25,22 @@ option(${PROJECT_NAME_UCASE}_DOWNLOAD_GTEST
 ###################################################################################################
 # Download and unpack googletest at configure time
 ###################################################################################################
+set(GTEST_MEMLEAK_DETECTOR_GTEST_VERSION release-1.10.0 CACHE 
+	STRING "GTest version to be downloaded if GTEST_MEMLEAK_DETECTOR_DOWNLOAD_GTEST is On" FORCE)
+
 if (${PROJECT_NAME_UCASE}_DOWNLOAD_GTEST)
 	configure_file(external/googletest/CMakeLists.txt.in external/googletest-download/CMakeLists.txt)
 	execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
 	  RESULT_VARIABLE result
 	  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external/googletest-download )
 	if(result)
-	  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+	  message(FATAL_ERROR "CMake step for Google Test failed: ${result}")
 	endif()
 	execute_process(COMMAND ${CMAKE_COMMAND} --build .
 	  RESULT_VARIABLE result
 	  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external/googletest-download )
 	if(result)
-	  message(FATAL_ERROR "Build step for googletest failed: ${result}")
+	  message(FATAL_ERROR "Build step for Google Test failed: ${result}")
 	endif()
 
 	# Prevent overriding the parent project's compiler/linker settings on Windows
