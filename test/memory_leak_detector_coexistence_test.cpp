@@ -1,3 +1,7 @@
+// Copyright(C) 2019 - 2020 Håkan Sidenvall <ekcoh.git@gmail.com>.
+// This file is subject to the license terms in the LICENSE file 
+// found in the root directory of this distribution.
+
 // Memory debugging tools (MSVC only)
 #if defined(_DEBUG) && defined(_MSC_VER)
 

@@ -11,7 +11,7 @@ void memory_leak_detector_test::SetUp()
 
 void memory_leak_detector_test::TearDown()
 {
-    //GivenMemoryFreed(); // clean-up if test didn't
+    // empty
 }
 
 void memory_leak_detector_test::GivenPreTestSequence()

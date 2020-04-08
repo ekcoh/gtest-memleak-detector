@@ -11,10 +11,9 @@ Currently only works with MSVC tool-chain using
 
 ## Requirements
 The project depends on the open source [Google Test](https://github.com/google/googletest) project. 
-You can import and add Google Test yourself or let the CMake script of this project download and 
-build it for you by setting the CMake property GTEST_MEMLEAK_DETECTOR_DOWNLOAD_GTEST 
-to ON (default). If you already have Google Test added to your project, set 
-GTEST_POLICIES_DOWNLOAD_GTEST to OFF.
+Google Test dependency is managed via FetchContent (requires CMake 3.11+) which means that if a 
+parent project already includes it that version will be used. If not, this project will fetch it
+from GitHub.
 
 ## Getting started
 To start using the memory leak detector, simply add the project as a sub-directory 

@@ -1,0 +1,9 @@
+version: 0.1.0.{build}
+skip_tags: true
+image: Visual Studio 2017
+shallow_clone: true
+build_script:
+- cmd: >-
+    call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
+
+    call "build.bat"

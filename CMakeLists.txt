@@ -2,7 +2,7 @@
 # This file is subject to the license terms in the LICENSE file 
 # found in the root directory of this distribution.
 
-cmake_minimum_required (VERSION 3.6)
+cmake_minimum_required (VERSION 3.11)
 
 ###################################################################################################
 # project: gtest_memleak_detector
@@ -19,38 +19,6 @@ option(${PROJECT_NAME_UCASE}_BUILD_TESTS
 	"If enabled, compile the tests." ON)
 option(${PROJECT_NAME_UCASE}_BUILD_EXAMPLES 
 	"If enabled, compile the examples." ON)
-option(${PROJECT_NAME_UCASE}_DOWNLOAD_GTEST 
-	"If enabled, download and build gtest as external project" ON)
-
-###################################################################################################
-# Download and unpack googletest at configure time
-###################################################################################################
-set(GTEST_MEMLEAK_DETECTOR_GTEST_VERSION release-1.10.0 CACHE 
-	STRING "GTest version to be downloaded if GTEST_MEMLEAK_DETECTOR_DOWNLOAD_GTEST is On" FORCE)
-
-if (${PROJECT_NAME_UCASE}_DOWNLOAD_GTEST)
-	configure_file(external/googletest/CMakeLists.txt.in external/googletest-download/CMakeLists.txt)
-	execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-	  RESULT_VARIABLE result
-	  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external/googletest-download )
-	if(result)
-	  message(FATAL_ERROR "CMake step for Google Test failed: ${result}")
-	endif()
-	execute_process(COMMAND ${CMAKE_COMMAND} --build .
-	  RESULT_VARIABLE result
-	  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external/googletest-download )
-	if(result)
-	  message(FATAL_ERROR "Build step for Google Test failed: ${result}")
-	endif()
-
-	# Prevent overriding the parent project's compiler/linker settings on Windows
-	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-	# Add googletest directly to our build. This defines the gtest and gtest_main targets.
-	add_subdirectory(${CMAKE_BINARY_DIR}/external/googletest-src
-					 ${CMAKE_BINARY_DIR}/external/googletest-build
-					 EXCLUDE_FROM_ALL)
-endif(${PROJECT_NAME_UCASE}_DOWNLOAD_GTEST)
 
 ###################################################################################################
 # library
