@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/i7uqdte77kny1bge?svg=true)](https://ci.appveyor.com/project/ekcoh/gtest-memleak-detector)
+
 # gtest-memleak-detector
 Google Test memory leak detection integration for C++11 projects and above.
 Currently only works with MSVC tool-chain using 
