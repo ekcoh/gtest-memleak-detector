@@ -5,6 +5,7 @@
 cmake_minimum_required (VERSION 3.11)
 
 include(FetchContent)
+include(GoogleTest)
 
 ###################################################################################################
 # Download and unpack Google Test at configure time if not already available.
@@ -39,7 +40,8 @@ target_link_libraries(${PROJECT_NAME}_unit_tests
 )
 
 enable_testing()
-add_test(NAME ${PROJECT_NAME}_unit_tests COMMAND ${PROJECT_NAME}_unit_tests )
+#add_test(NAME ${PROJECT_NAME}_unit_tests COMMAND ${PROJECT_NAME}_unit_tests )
+gtest_discover_tests(${PROJECT_NAME}_unit_tests)
 
 # Coexistence tests
 add_executable(${PROJECT_NAME}_coexistence_tests
@@ -56,4 +58,5 @@ target_link_libraries(${PROJECT_NAME}_coexistence_tests
 )
 
 enable_testing()
-add_test(NAME ${PROJECT_NAME}_coexistence_tests COMMAND ${PROJECT_NAME}_coexistence_tests )
+#add_test(NAME ${PROJECT_NAME}_coexistence_tests COMMAND ${PROJECT_NAME}_coexistence_tests )
+gtest_discover_tests(${PROJECT_NAME}_coexistence_tests)
