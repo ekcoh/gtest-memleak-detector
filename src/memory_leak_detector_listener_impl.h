@@ -18,8 +18,6 @@
 #endif // _CRTDBG_MAP_ALLOC
 
 #include <crtdbg.h> // _CrtMemState
-
-#include <string>   // std::string
 #include <fstream>  // std::ifstream, std::ofstream
 
 namespace gtest_memleak_detector
@@ -28,7 +26,7 @@ namespace gtest_memleak_detector
   {
     public:
 	  Impl(int argc, char** argv0);
-	  ~Impl();
+	  ~Impl() noexcept;
 
 	  void OnTestProgramStart(const ::testing::UnitTest& unit_test);
 	  void OnTestStart(const ::testing::TestInfo& test_info);
@@ -39,8 +37,6 @@ namespace gtest_memleak_detector
       static const long no_break_alloc;
 	  static long parsed_alloc_no;
       static bool try_parse_alloc_no(long& dst, const char* str) noexcept;
-      static std::string describe_test(const ::testing::TestInfo& test_info);
-      
       bool read_and_compare(int argc, char** argv);
 	
 	  std::ifstream  in_;

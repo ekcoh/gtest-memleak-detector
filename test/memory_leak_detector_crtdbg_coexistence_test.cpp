@@ -16,7 +16,7 @@
 
 using namespace gtest_memleak_detector;
 
-class memory_leak_detector_crt_coexistence_test : public memory_leak_detector_test
+class memory_leak_detector_crtdbg_coexistence_test : public memory_leak_detector_test
 {
 public:
     virtual void SetUp()
@@ -63,7 +63,7 @@ protected:
 private:
     static unsigned report_hook_call_count;
     
-    static int ReportHook(int reportType, char* message, int* returnValue)
+    static int ReportHook(int /*reportType*/, char* /*message*/, int* /*returnValue*/) noexcept
     {
         ++report_hook_call_count;
         return 1; // TRUE
@@ -72,9 +72,9 @@ private:
     bool hook_installed;
 };
 
-unsigned memory_leak_detector_crt_coexistence_test::report_hook_call_count = 0u;
+unsigned memory_leak_detector_crtdbg_coexistence_test::report_hook_call_count = 0u;
 
-TEST_F(memory_leak_detector_crt_coexistence_test,
+TEST_F(memory_leak_detector_crtdbg_coexistence_test,
     preinstalled_report_hooks__should_receive_callbacks__when_detector_is_running)
 {
     GivenHookInstalled();
@@ -89,7 +89,7 @@ TEST_F(memory_leak_detector_crt_coexistence_test,
     GivenHookUninstalled();
 }
 
-TEST_F(memory_leak_detector_crt_coexistence_test,
+TEST_F(memory_leak_detector_crtdbg_coexistence_test,
     leak_should_be_detected__even_if_there_are_preinstalled_report_hooks__when_detector_is_running)
 {
     GivenHookInstalled();
@@ -104,7 +104,7 @@ TEST_F(memory_leak_detector_crt_coexistence_test,
     GivenHookUninstalled();
 }
 
-TEST_F(memory_leak_detector_crt_coexistence_test,
+TEST_F(memory_leak_detector_crtdbg_coexistence_test,
     leak_should_be_detected__even_if_there_are_report_hooks_installed_during_test__when_detector_is_running)
 {
     GivenPreTestSequence();

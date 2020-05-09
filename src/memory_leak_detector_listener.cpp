@@ -6,13 +6,20 @@
 
 #include "memory_leak_detector_listener_impl.h"
 
-gtest_memleak_detector::MemoryLeakDetectorListener::MemoryLeakDetectorListener(int argc, char** argv)
-	: impl_(nullptr)
-{
+
 #ifdef GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
-	impl_ = std::make_unique<gtest_memleak_detector::MemoryLeakDetectorListener::Impl>(argc, argv);
-#endif // GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
+gtest_memleak_detector::MemoryLeakDetectorListener::MemoryLeakDetectorListener(
+    int argc, char** argv)
+    : impl_(nullptr)
+{
+	impl_ = std::make_unique<Impl>(argc, argv);
 }
+#else
+gtest_memleak_detector::MemoryLeakDetectorListener::MemoryLeakDetectorListener(
+    int, char**)
+    : impl_(nullptr)
+{ }
+#endif // GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
 
 gtest_memleak_detector::MemoryLeakDetectorListener::~MemoryLeakDetectorListener()
 {
@@ -26,7 +33,7 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::OnTestProgramStart(
 	impl_->OnTestProgramStart(unit_test);
 }
 #else
-void gtest_policy::MemoryLeakDetectorListener::OnTestProgramStart(
+void gtest_memleak_detector::MemoryLeakDetectorListener::OnTestProgramStart(
 	const ::testing::UnitTest&) {}
 #endif // GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
 
@@ -48,7 +55,7 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::OnTestEnd(
 	impl_->OnTestEnd(test_info);
 }
 #else
-void gtest_policy::MemoryLeakDetectorListener::OnTestEnd(
+void gtest_memleak_detector::MemoryLeakDetectorListener::OnTestEnd(
 	const ::testing::TestInfo&) {}
 #endif // GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
 

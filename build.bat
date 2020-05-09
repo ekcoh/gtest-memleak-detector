@@ -12,6 +12,11 @@
 @rem https://blog.kitware.com/dynamic-google-test-discovery-in-cmake-3-10/
 @rem https://stackoverflow.com/questions/50861636/using-google-tests-with-cmake-ctest-with-the-new-command-gtest-discover-tests
 
+@rem C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\amd64\vcvars64.bat
+@rem C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\x86_amd64\vcvars64.bat
+@rem C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\amd64_x86\vcvars64.bat
+
+:: Main build flow
 @setlocal
 @set binary_dir="build/x64-release"
 @if not exist %binary_dir% mkdir %binary_dir%
@@ -26,14 +31,17 @@
 @if %errorlevel% neq 0 @echo. && @echo Build failed. && @exit /B #%errorlevel%
 @goto done
 
+:: Run CMake generator
 :generate
 cmake -G "Ninja" ../.. -DCMAKE_VERBOSE_MAKEFILE=OFF
 @exit /B #%errorlevel%
 
+:: Run CMake build
 :build
 cmake --build . --config Release --target all 
 @exit /B #%errorlevel%
 
+:: Run CTest
 :test
 ctest
 @exit /B #%errorlevel%
@@ -67,6 +75,7 @@ for /F "tokens=1-4 delims=:.," %%a in ("%ENDTIME%") do (
 @echo.
 @echo Build succeeded. Time: %DURATION%
 
+:: End script successfully
 :end
 @endlocal
 @exit /B 0

@@ -4,9 +4,15 @@
 
 #include "memory_leak_detector_listener_impl.h"
 
-#include <fstream>
+#include <string>   // std::string
 #include <exception>
+
+#pragma warning( push )
+// warning C5039: potentially throwing function passed to extern C function 
+// under -EHc. May result in undefined behavior.
+#pragma warning( disable : 5039 ) 
 #include <Windows.h>
+#pragma warning( pop )
 
 #ifndef GTEST_MEMLEAK_DETECTOR_FILENAME
 #define GTEST_MEMLEAK_DETECTOR_FILENAME "gtest_memleak_detector.allocation"
@@ -24,57 +30,10 @@ const long gtest_memleak_detector::MemoryLeakDetectorListener::Impl::no_break_al
 // Locals
 long gtest_memleak_detector::MemoryLeakDetectorListener::Impl::parsed_alloc_no = -1;
 
-// Translation unit globals
+// Translation unit utility functions
 namespace {
-    //_CRT_REPORT_HOOK chained_report_hook = nullptr;
 
-    class scoped_crt_report_hook
-    {
-    public:
-        explicit scoped_crt_report_hook(_CRT_REPORT_HOOK hook) noexcept
-            : hook_(hook), preinstalled_hook_(_CrtGetReportHook())
-        { 
-            if (hook)
-                _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, hook);
-        }
-
-        ~scoped_crt_report_hook() noexcept
-        {
-            if (hook_) 
-                uninstall(hook_);
-            if (preinstalled_hook_) 
-                install(preinstalled_hook_);
-        }
-    private:
-        static void install(_CRT_REPORT_HOOK hook) noexcept
-        {
-            if (hook)
-                set_hook(_CRT_RPTHOOK_INSTALL, hook);
-        }
-
-        static void uninstall(_CRT_REPORT_HOOK hook) noexcept
-        {
-            if (hook) 
-                set_hook(_CRT_RPTHOOK_REMOVE, hook);
-        }
-
-        static void set_hook(int mode, _CRT_REPORT_HOOK hook)
-        {
-            if (_CrtSetReportHook2(mode, hook) == -1)
-            {
-                if (mode == _CRT_RPTHOOK_INSTALL)
-                    GTEST_FATAL_FAILURE_("Failed to install CRT RPT hook for memory leak detection");
-                else
-                    GTEST_FATAL_FAILURE_("Failed to uninstall CRT RPT hook for memory leak detection");
-            }
-        }
-
-        _CRT_REPORT_HOOK hook_;
-        _CRT_REPORT_HOOK preinstalled_hook_;
-    };
-}
-
-std::string gtest_memleak_detector::MemoryLeakDetectorListener::Impl::describe_test(const ::testing::TestInfo& test_info)
+std::string describe_test(const ::testing::TestInfo& test_info)
 {
     std::stringstream ss;
     ss << test_info.test_suite_name();
@@ -91,10 +50,16 @@ std::string gtest_memleak_detector::MemoryLeakDetectorListener::Impl::describe_t
         ss << test_info.type_param();
     }
     return ss.str();
-}
+} 
 
-bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::try_parse_alloc_no(long& dst, const char* str) noexcept
+} // anonomuous namespace
+
+bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::try_parse_alloc_no(
+    long& dst, const char* str) noexcept
 {
+    // IMPORTANT: Remember that this function must have noexcept/nothrow semantics
+    //            since indirectly called by C-run-time.
+
     assert(str);
 
     const auto start = strchr(str, '{');
@@ -113,8 +78,8 @@ bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::try_parse_alloc_n
 
     // Parse allocation no as 32-bit integer.
     char buffer[11]; // 10 + termination char
-    strncpy_s(buffer, start + 1, len);
-    auto allocation_no = strtol(buffer, nullptr, 10);
+    strncpy_s(buffer, start + 1, static_cast<size_t>(len));
+    const auto allocation_no = strtol(buffer, nullptr, 10);
     if (allocation_no == LONG_MIN || allocation_no == LONG_MAX)
         return false; // failed
 
@@ -162,9 +127,6 @@ gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Impl(int argc, char** 
 	pre_state_{ 0 },
 	break_alloc_(no_break_alloc)
 {
-    /*TCHAR szFileName[MAX_PATH];
-    GetModuleFileName(NULL, szFileName, MAX_PATH)
-*/
 	if (argc > 0)
 	{
         // Get file info
@@ -180,8 +142,7 @@ gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Impl(int argc, char** 
     out_ << argc << '\n';
     for (auto i = 0; i < argc; ++i)
     {
-        const auto arg = argv[i];
-        out_ << arg << '\n';
+        out_ << argv[i] << '\n';
     }
 
     if (IsDebuggerPresent())
@@ -190,7 +151,7 @@ gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Impl(int argc, char** 
         if (in_)
         {
             if (!read_and_compare(argc, argv))
-                in_.close(); // failed or invalid
+                in_.close(); // failed, invalid or not applicable
         }
     }
 
@@ -210,7 +171,7 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestStart(
 	_CrtMemCheckpoint(&pre_state_);
 
     if (!IsDebuggerPresent() || !in_)
-        return;
+        return; // no applicable results to use or debugger not attached
 
     std::string test_description;
     in_ >> break_alloc_;
@@ -233,19 +194,20 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestStart(
 void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestEnd(
 	const ::testing::TestInfo& test_info)
 {
-	// Avoid adding extra asserts if test is not passing anyway and the failing logic is the main failure.
-	// Another reason to do this is that gtest report false positives when reporting assertion failures
-	// due to memory allocation within gtest framework (bad).
-    const auto test_passed = test_info.result()->Passed();
+	// Avoid adding extra asserts if test is not passing anyway and the failing
+    // logic is the main failure.
+	// Another reason to do this is that gtest report false positives when 
+    // reporting assertion failures due to memory allocation within gtest 
+    // framework (bad).
 
-	// Create memory checkpoint post test and compute diff to detect leak(s)
     auto leak_detected = false;
-    _CrtMemState mem_diff;
-    if (test_passed)
+    if (test_info.result()->Passed())
     {
         _CrtMemState post_state;
         _CrtMemCheckpoint(&post_state);
-        leak_detected = _CrtMemDifference(&mem_diff, &pre_state_, &post_state);
+
+        _CrtMemState mem_diff;
+        leak_detected = _CrtMemDifference(&mem_diff, &pre_state_, &post_state) != 0;
         if (leak_detected)
         {
             // Dump objects and statistics via redirect hook
@@ -254,7 +216,10 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestEnd(
             
             // Make scoped RPT hook since we only need to capture statistics
             static auto preinstalled_hook = _CrtGetReportHook();
-            static auto report_cb = [](int reportType, char* message, int* returnValue) -> int {
+            static const auto report_cb = [](int reportType, char* message, int* returnValue) noexcept -> int 
+            {
+                // IMPORTANT: Remember that this function must have noexcept/nothrow semantics
+                //            since indirectly called by C-run-time.
                 auto result = TRUE;
                 if (preinstalled_hook)
                     result = preinstalled_hook(reportType, message, returnValue);
@@ -266,25 +231,42 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestEnd(
                 return result;
             };
 
+            // "warning C5039: '_CrtSetReportHook2': pointer or reference to 
+            // potentially throwing function passed to extern C function under
+            // -EHc. Undefined behavior may occur if this function throws an 
+            // exception."
+            // This is a false positive since report_cb lambda is noexcept and cannot throw.
+            // Seems like MSVC do not warn about regular function, but less 
+            // readable design, so keeping this suppression for now.
+#pragma warning( push )            
+#pragma warning( disable : 5039 ) 
             // Replace preinstalled hook with lambda and dump statistics
             _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, report_cb);
+#pragma warning( pop )
             _CrtMemDumpAllObjectsSince(&pre_state_);
             _CrtMemDumpStatistics(&mem_diff);
 
             // Restore previous (preinstalled) hook
             if (preinstalled_hook)
+            {
+#pragma warning( push )            
+#pragma warning( disable : 5039 ) // Same motivation as above
+                _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, report_cb);
                 _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, preinstalled_hook);
+#pragma warning( pop )
+            }
         }
     }
 
-	// Write test information to output file
+	// Write test information to output file, note that this 
+    // potentially allocates memory on its own for stream buffers.
 	if (out_)
 	{
         out_ << parsed_alloc_no << '\n';		
         out_ << describe_test(test_info) << '\n';
 	}
 
-    if (leak_detected)
+    if (test_info.result()->Passed() && leak_detected)
         GTEST_NONFATAL_FAILURE_("Memory leak detected");
 }
 

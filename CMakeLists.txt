@@ -8,6 +8,8 @@ cmake_minimum_required (VERSION 3.11)
 # project: gtest_memleak_detector
 ###################################################################################################
 
+include(cmake/gtest_memleak_detector_compiler.cmake)
+
 project(gtest_memleak_detector 
     VERSION 0.1.0
 	HOMEPAGE_URL https://github.com/ekcoh/gtest-memleak-detector.git
@@ -28,25 +30,11 @@ option(${PROJECT_NAME_UCASE}_BUILD_EXAMPLES
 add_library(${PROJECT_NAME} STATIC
 	"include/gtest_memleak_detector/gtest_memleak_detector.h"
 )
-
-if(MSVC)
-	# CMake appends /W3 by default, and having /W3 followed by /W4 will result in 
-	# cl : Command line warning D9025 : overriding '/W3' with '/W4'.  Since this is
-	# a command line warning and not a compiler warning, it cannot be suppressed except
-	# by fixing the command line.
-	string(REGEX REPLACE " /W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-	string(REGEX REPLACE " /W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-	target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX)
-else(MSVC)
-	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic -Werror)
-endif(MSVC)
-
+add_subdirectory(src)
+gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} 
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-
-add_subdirectory(src)
-
 target_link_libraries(${PROJECT_NAME}
 	PRIVATE gtest_main
 )
