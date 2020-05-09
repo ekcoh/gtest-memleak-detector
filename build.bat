@@ -9,13 +9,6 @@
 @rem - CMake is available
 @rem - Ninja is available
 
-@rem https://blog.kitware.com/dynamic-google-test-discovery-in-cmake-3-10/
-@rem https://stackoverflow.com/questions/50861636/using-google-tests-with-cmake-ctest-with-the-new-command-gtest-discover-tests
-
-@rem C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\amd64\vcvars64.bat
-@rem C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\x86_amd64\vcvars64.bat
-@rem C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\amd64_x86\vcvars64.bat
-
 :: Main build flow
 @setlocal
 @set binary_dir="build/x64-release"
