@@ -8,6 +8,7 @@ cmake_minimum_required (VERSION 3.11)
 # project: gtest_memleak_detector
 ###################################################################################################
 
+include(FetchContent)
 include(cmake/gtest_memleak_detector_compiler.cmake)
 
 project(gtest_memleak_detector 
@@ -23,6 +24,21 @@ option(${PROJECT_NAME_UCASE}_BUILD_EXAMPLES
 	"If enabled, compile the examples." ON)
 
 ###################################################################################################
+# Download and unpack StackWalker at configure time if not already available.
+# If made available by parent project use that version and configuration instead.
+FetchContent_Declare(
+  stackwalker
+  GIT_REPOSITORY https://github.com/JochenKalmbach/StackWalker.git
+  GIT_TAG        1.20
+)
+FetchContent_GetProperties(stackwalker)
+if(NOT stackwalker_POPULATED)
+  FetchContent_Populate(stackwalker)
+  set(StackWalker_DISABLE_TESTS ON CACHE BOOL "" FORCE)
+  add_subdirectory(${stackwalker_SOURCE_DIR} ${stackwalker_BINARY_DIR})
+endif()
+
+###################################################################################################
 # library
 ###################################################################################################
 
@@ -34,9 +50,11 @@ add_subdirectory(src)
 gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} 
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+	PRIVATE ${stackwalker_SOURCE_DIR}/Main # Incorrectly setup by StackWalker CMake
 )
 target_link_libraries(${PROJECT_NAME}
 	PRIVATE gtest_main
+	PRIVATE StackWalker
 )
 
 ###################################################################################################

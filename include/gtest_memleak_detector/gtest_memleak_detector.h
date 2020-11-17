@@ -31,6 +31,16 @@ int main(int argc, char **argv) \
   return RUN_ALL_TESTS(); \
 }
 
+// Have a max limit on stack trace size to avoid allocating memory as part
+// of generating stack trace. Size is in bytes and includes null-termination.
+#ifndef GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH 
+#define GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH 4096 
+#endif // GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH
+
+#ifndef GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH
+#define GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH 1024
+#endif
+
 namespace gtest_memleak_detector { 
 
 ///////////////////////////////////////////////////////////////////////////////

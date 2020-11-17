@@ -22,29 +22,51 @@
 
 namespace gtest_memleak_detector
 {
-  class MemoryLeakDetectorListener::Impl
-  {
+    class MemoryLeakDetectorListener::Impl
+    {
     public:
-	  Impl(int argc, char** argv0);
-	  ~Impl() noexcept;
+	    Impl(int argc, char** argv0);
+	    ~Impl() noexcept;
 
-	  void OnTestProgramStart(const ::testing::UnitTest& unit_test);
-	  void OnTestStart(const ::testing::TestInfo& test_info);
-	  void OnTestEnd(const ::testing::TestInfo& test_info);
-	  void OnTestProgramEnd(const ::testing::UnitTest& unit_test);
+	    void OnTestProgramStart(const ::testing::UnitTest& unit_test);
+	    void OnTestStart(const ::testing::TestInfo& test_info);
+	    void OnTestEnd(const ::testing::TestInfo& test_info);
+	    void OnTestProgramEnd(const ::testing::UnitTest& unit_test);
 	
     private:
-      static const long no_break_alloc;
-	  static long parsed_alloc_no;
-      static bool try_parse_alloc_no(long& dst, const char* str) noexcept;
-      bool read_and_compare(int argc, char** argv);
-	
-	  std::ifstream  in_;
-	  std::ofstream  out_;
-      _CrtMemState   pre_state_;
-      long           break_alloc_;
-      struct _stat   file_info_;
-	};
+        static int alloc_hook(int nAllocType, void* pvData,
+            size_t nSize, int nBlockUse, long lRequest,
+            const unsigned char* szFileName, int nLine) noexcept;
+
+        static bool try_parse_alloc_no(long& dst, const char* str) noexcept;
+
+        static const long no_break_alloc;
+	    static long parsed_alloc_no;
+        static char* buffer_ptr;
+        static char* filename_ptr;
+        static unsigned long* line_ptr;
+        static _CRT_ALLOC_HOOK stored_alloc_hook;
+        
+        bool read_and_compare(int argc, char** argv);
+        
+        void set_alloc_hook();
+        void revert_alloc_hook();
+
+        void set_globals();
+        void unset_globals();
+
+        void fail();
+
+	    std::ifstream   in_;
+	    std::ofstream   out_;
+        _CrtMemState    pre_state_;
+        bool            alloc_hook_set_;
+        long            break_alloc_;
+        struct _stat    file_info_;
+        char            buffer[GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH]{ 0 };
+        char            filename[GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH]{ 0 };
+        unsigned long   line;
+    };
 } // namespace gtest_memleak_detector
 
 #else

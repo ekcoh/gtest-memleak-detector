@@ -25,15 +25,22 @@ public:
 
         memory_leak_detector_test::SetUp();
 
-        hook_installed = false;
+        alloc_hook_installed = false;
+        report_hook_installed = false;
+        alloc_hook_call_count = 0u;
         report_hook_call_count = 0u;
     }
 
     virtual void TearDown()
     {
-        GivenHookUninstalled();
+        GivenReportHookUninstalled();
 
         memory_leak_detector_test::TearDown();
+    }
+
+    unsigned AllocHookCallCount() const noexcept
+    {
+        return alloc_hook_call_count;
     }
 
     unsigned ReportHookCallCount() const noexcept
@@ -42,42 +49,77 @@ public:
     }
 
 protected:
-    void GivenHookInstalled()
+    void GivenAllocHookInstalled()
     {
-        if (!hook_installed)
+        if (!alloc_hook_installed)
         {
-            ASSERT_EQ(_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, ReportHook), 1);
-            hook_installed = true;
+            stored_alloc_hook = _CrtSetAllocHook(AllocHook);
+            //ASSERT_EQ(_CrtSetAllocHook(AllocHook), nullptr);
+            alloc_hook_installed = true;
         }
     }
 
-    void GivenHookUninstalled()
+    void GivenAllocHookUninstalled()
     {
-        if (hook_installed)
+        if (alloc_hook_installed)
+        {
+#pragma warning( push )            
+#pragma warning( disable : 5039 )  // stored_alloc_hook will not throw
+            _CrtSetAllocHook(stored_alloc_hook); // restore
+#pragma warning( pop )
+            //ASSERT_NE(_CrtSetAllocHook(nullptr), &AllocHook);
+            alloc_hook_installed = false;
+        }
+    }
+
+    void GivenReportHookInstalled()
+    {
+        if (!report_hook_installed)
+        {
+            ASSERT_EQ(_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, ReportHook), 1);
+            report_hook_installed = true;
+        }
+    }
+
+    void GivenReportHookUninstalled()
+    {
+        if (report_hook_installed)
         {
             ASSERT_EQ(_CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, ReportHook), 0);
-            hook_installed = false;
+            report_hook_installed = false;
         }
     }
 
 private:
+    static unsigned alloc_hook_call_count;
     static unsigned report_hook_call_count;
     
+    static int AllocHook(int /*nAllocType*/, void* /*pvData*/,
+        size_t /*nSize*/, int /*nBlockUse*/, long /*lRequest*/,
+        const unsigned char* /*szFileName*/, int /*nLine*/) noexcept
+    {
+        ++alloc_hook_call_count;
+        return 1; // TRUE - indicates success
+    }
+
     static int ReportHook(int /*reportType*/, char* /*message*/, int* /*returnValue*/) noexcept
     {
         ++report_hook_call_count;
-        return 1; // TRUE
+        return 1; // TRUE - indicates success
     }
 
-    bool hook_installed;
+    bool report_hook_installed;
+    bool alloc_hook_installed;
+    _CRT_ALLOC_HOOK stored_alloc_hook;
 };
 
+unsigned memory_leak_detector_crtdbg_coexistence_test::alloc_hook_call_count = 0u;
 unsigned memory_leak_detector_crtdbg_coexistence_test::report_hook_call_count = 0u;
 
 TEST_F(memory_leak_detector_crtdbg_coexistence_test,
     preinstalled_report_hooks__should_receive_callbacks__when_detector_is_running)
 {
-    GivenHookInstalled();
+    GivenReportHookInstalled();
 
     GivenPreTestSequence();
     GivenMemoryAllocated(allocation_type::new_delete);
@@ -86,13 +128,30 @@ TEST_F(memory_leak_detector_crtdbg_coexistence_test,
     GivenPostTestSequence(expected_outcome::no_mem_leak);
     EXPECT_GT(ReportHookCallCount(), 1u); // actually ~250 but good enough
 
-    GivenHookUninstalled();
+    GivenReportHookUninstalled();
 }
+
+TEST_F(memory_leak_detector_crtdbg_coexistence_test,
+    preinstalled_alloc_hook__should_receive_callbacks__when_detector_is_running)
+{
+    GivenAllocHookInstalled();
+
+    GivenPreTestSequence();
+    GivenMemoryAllocated(allocation_type::new_delete);
+    _CrtDumpMemoryLeaks(); // trigger report hook
+    GivenMemoryFreed(allocation_type::new_delete);
+    GivenPostTestSequence(expected_outcome::no_mem_leak);
+    EXPECT_GT(AllocHookCallCount(), 1u); // actually ~29 but good enough
+
+    GivenAllocHookUninstalled();
+}
+
+// TODO Verify that preinstalled_alloc_hook receive callbacks when detector is running
 
 TEST_F(memory_leak_detector_crtdbg_coexistence_test,
     leak_should_be_detected__even_if_there_are_preinstalled_report_hooks__when_detector_is_running)
 {
-    GivenHookInstalled();
+    GivenReportHookInstalled();
 
     GivenPreTestSequence();
     GivenMemoryAllocated(allocation_type::new_delete);
@@ -101,7 +160,7 @@ TEST_F(memory_leak_detector_crtdbg_coexistence_test,
     GivenMemoryFreed(allocation_type::new_delete);
     EXPECT_GT(ReportHookCallCount(), 1u); // actually ~250 but good enough
 
-    GivenHookUninstalled();
+    GivenReportHookUninstalled();
 }
 
 TEST_F(memory_leak_detector_crtdbg_coexistence_test,
@@ -109,9 +168,9 @@ TEST_F(memory_leak_detector_crtdbg_coexistence_test,
 {
     GivenPreTestSequence();
     GivenMemoryAllocated(allocation_type::new_delete);
-    GivenHookInstalled();
+    GivenReportHookInstalled();
     _CrtDumpMemoryLeaks(); // trigger report hook
-    GivenHookUninstalled();
+    GivenReportHookUninstalled();
     GivenPostTestSequence(expected_outcome::mem_leak_failure);
     GivenMemoryFreed(allocation_type::new_delete);
     EXPECT_GT(ReportHookCallCount(), 1u); // actually ~250 but good enough
