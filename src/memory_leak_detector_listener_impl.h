@@ -34,28 +34,18 @@ namespace gtest_memleak_detector
 	    void OnTestProgramEnd(const ::testing::UnitTest& unit_test);
 	
     private:
-        static int alloc_hook(int nAllocType, void* pvData,
+        static int AllocHook(int nAllocType, void* pvData,
             size_t nSize, int nBlockUse, long lRequest,
             const unsigned char* szFileName, int nLine) noexcept;
 
-        static bool try_parse_alloc_no(long& dst, const char* str) noexcept;
+        static bool TryParseAllocNo(long& dst, const char* str) noexcept;
 
-        static const long no_break_alloc;
-	    static long parsed_alloc_no;
-        static char* buffer_ptr;
-        static char* filename_ptr;
-        static unsigned long* line_ptr;
-        static _CRT_ALLOC_HOOK stored_alloc_hook;
+        bool ReadAndCompare(int argc, char** argv);
         
-        bool read_and_compare(int argc, char** argv);
-        
-        void set_alloc_hook();
-        void revert_alloc_hook();
+        void SetAllocHook();
+        void RevertAllocHook();
 
-        void set_globals();
-        void unset_globals();
-
-        void fail();
+        void Fail();
 
 	    std::ifstream   in_;
 	    std::ofstream   out_;
