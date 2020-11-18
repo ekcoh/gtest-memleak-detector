@@ -17,8 +17,9 @@
 #define _CRTDBG_MAP_ALLOC
 #endif // _CRTDBG_MAP_ALLOC
 
-#include <crtdbg.h> // _CrtMemState
-#include <fstream>  // std::ifstream, std::ofstream
+#include <crtdbg.h>      // _CrtMemState
+#include <fstream>       // std::ifstream, std::ofstream
+#include <unordered_map> // std::unordered_map
 
 namespace gtest_memleak_detector
 {
@@ -26,7 +27,12 @@ namespace gtest_memleak_detector
     {
     public:
 	    Impl(int argc, char** argv0);
-	    ~Impl() noexcept;
+	    ~Impl() noexcept = default;
+
+        const Impl(const Impl&) = delete;
+        const Impl(Impl&&) noexcept = delete;
+        Impl& operator=(const Impl&) = delete;
+        Impl& operator=(Impl&&) = delete;
 
 	    void OnTestProgramStart(const ::testing::UnitTest& unit_test);
 	    void OnTestStart(const ::testing::TestInfo& test_info);
@@ -51,11 +57,14 @@ namespace gtest_memleak_detector
 	    std::ofstream   out_;
         _CrtMemState    pre_state_;
         bool            alloc_hook_set_;
-        long            break_alloc_;
+        //long            break_alloc_;
         struct _stat    file_info_;
         char            buffer[GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH]{ 0 };
         char            filename[GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH]{ 0 };
         unsigned long   line;
+        std::string     temp_file_path;
+        std::string     file_path;
+        std::unordered_map<std::string, long> db;
     };
 } // namespace gtest_memleak_detector
 

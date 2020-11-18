@@ -15,16 +15,44 @@
 #include <StackWalker/StackWalker.h>
 #pragma warning( pop )
 
-#ifndef GTEST_MEMLEAK_DETECTOR_FILENAME
-#define GTEST_MEMLEAK_DETECTOR_FILENAME "gtest_memleak_detector.allocation"
-#endif // GTEST_MEMLEAK_DETECTOR_FILENAME
+//#ifndef GTEST_MEMLEAK_DETECTOR_FILENAME
+//#define GTEST_MEMLEAK_DETECTOR_FILENAME "gtest_memleak_detector.allocation"
+//#endif // GTEST_MEMLEAK_DETECTOR_FILENAME
 
-#ifndef GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME
-#define GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME \
-    GTEST_MEMLEAK_DETECTOR_FILENAME ## ".tmp"
-#endif // GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME
+//#define GTEST_MEMLEAK_DETECTOR_FILE_SUFFIX ".memleaks"
+//#define GTEST_MEMLEAK_DETECTOR_TEMP_SUFFIX ".tmp"
+
+//#ifndef GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME
+//#define GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME \
+//    GTEST_MEMLEAK_DETECTOR_FILENAME ## ".tmp"
+//#endif // GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME
 
 #ifdef GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE
+
+// This normally opaque struct is vaguely documented here:
+// https://docs.microsoft.com/en-us/visualstudio/debugger/crt-debug-heap-details?view=vs-2019
+//
+// Note that we are only interested in request counter so other fields are only
+// relevant for getting padding right.
+typedef struct _CrtMemBlockHeader
+{
+    struct _CrtMemBlockHeader * pBlockHeaderNext;
+    struct _CrtMemBlockHeader * pBlockHeaderPrev;
+    char *                      szFileName;
+    int                         nLine;
+#ifdef _WIN64
+    // These items are reversed on Win64 to eliminate gaps in the struct
+    // and ensure that sizeof(struct)%16 == 0, so 16-byte alignment is
+    // maintained in the debug heap.
+    int                         nBlockUse;
+    size_t                      nDataSize;
+#else  /* _WIN64 */
+    size_t                      nDataSize;
+    int                         nBlockUse;
+#endif  /* _WIN64 */
+    long                        lRequest;
+    // Further members not necessary
+} _CrtMemBlockHeader;
 
 struct trace_pointers
 {
@@ -41,10 +69,13 @@ _CRT_ALLOC_HOOK stored_alloc_hook = nullptr;
 trace_pointers  pointers;
 long            parsed_alloc_no = no_break_alloc;
 long            break_alloc = no_break_alloc;
-unsigned long   discarded = 0;
 bool            discard = false;
 
 long            alloc_no = 0;
+long            pre_alloc_no = 0;
+long            post_alloc_no = 0;
+long            pre_trace_no = 0;
+long            post_trace_no = 0;
 
 // Translation unit utility functions
 namespace {
@@ -344,44 +375,43 @@ bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::ReadAndCompare(
 
 gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Impl(int argc, char** argv) :
 	pre_state_{ 0 },
-    alloc_hook_set_(false),
-    break_alloc_(no_break_alloc)
+    alloc_hook_set_(false)
 {
-	if (argc > 0)
-	{
-        // Get file info
-		if (_stat(argv[0], &file_info_) != 0)
-			memset(&file_info_, 0, sizeof(struct _stat));
-	}
+    if (argc == 0)
+        throw std::exception("at least executable name required");
+    if (argv == nullptr)
+        throw std::exception("missing command line arguments");
+
+    // Set temp file path
+    temp_file_path = argv[0];
+    temp_file_path += ".gt.memleaks.tmp";
+
+    // Set database file path
+    file_path = argv[0];
+    file_path += ".gt.memleaks";
+
+    // Get test binary file info
+    if (_stat(argv[0], &file_info_) != 0) // TODO THROW instead?!
+        memset(&file_info_, 0, sizeof(struct _stat));
 
     // Write timestamps and arguments to file.
     // This is needed to determine if a consecutive test run has the same configuration
-    out_.open(GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME);
+    out_.open(temp_file_path);
     out_ << file_info_.st_size << '\n' 
          << file_info_.st_mtime << '\n';
     out_ << argc << '\n';
     for (auto i = 0; i < argc; ++i)
-    {
         out_ << argv[i] << '\n';
-    }
 
-    //if (IsDebuggerPresent())
-    //{
-        in_.open(GTEST_MEMLEAK_DETECTOR_FILENAME);
-        if (in_)
-        {
-            if (!ReadAndCompare(argc, argv)) // TODO Delete file if corrupt
-                in_.close(); // failed, invalid or not applicable
-        }
-//    }
+    in_.open(file_path);
+    if (in_)
+    {
+        if (!ReadAndCompare(argc, argv)) // TODO Delete file if corrupt
+            in_.close(); // failed, invalid or not applicable
+    }
 
 	// Turn on debug allocation
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); 
-}
-
-gtest_memleak_detector::MemoryLeakDetectorListener::Impl::~Impl()
-{
-    // Empty
 }
 
 int gtest_memleak_detector::MemoryLeakDetectorListener::Impl::AllocHook(
@@ -395,10 +425,15 @@ int gtest_memleak_detector::MemoryLeakDetectorListener::Impl::AllocHook(
     UNREFERENCED_PARAMETER(szFileName);
     UNREFERENCED_PARAMETER(nLine);
 
+    if (nAllocType != _HOOK_FREE)
+    {
+        if (nAllocType != _HOOK_REALLOC)
+            alloc_no = lRequest;
+    }
+
     if (discard)
-    {   // allocation FREE do not drive request no
-        if (nAllocType != _HOOK_FREE)
-            ++discarded;
+    {   
+
     }
     else
     {
@@ -410,13 +445,12 @@ int gtest_memleak_detector::MemoryLeakDetectorListener::Impl::AllocHook(
             if (lRequest == break_alloc)
             {
                 discard = true;
-                //discarded = 0;
-                {   // Scoped to allow computing discarded allocations
-                    Trace trace(pointers.buffer_ptr,
-                        pointers.buffer_ptr + GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH,
-                        pointers.filename_ptr, pointers.line_ptr);
-                    trace.ShowCallstack(); // Result stored in buffer_ptr
-                }
+                pre_trace_no = alloc_no;
+                Trace trace(pointers.buffer_ptr,
+                    pointers.buffer_ptr + GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH,
+                    pointers.filename_ptr, pointers.line_ptr);
+                trace.ShowCallstack(); // Result stored in buffer_ptr
+                post_trace_no = alloc_no;
                 discard = false;
             }
             break;
@@ -468,46 +502,77 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestStart(
     // as well since it will offset recorded allocation request indices.
     SetAllocHook();
 
-    parsed_alloc_no = no_break_alloc;
-	_CrtMemCheckpoint(&pre_state_);
+    _CrtMemCheckpoint(&pre_state_);
 
-    if (/*!IsDebuggerPresent() ||*/ !in_)
-    {
-        RevertAllocHook();
-        return; // no applicable results to use or debugger not attached
-    }
+    // If in file has been invalidated or do not exist
+    //if (!in_)
+    //{
+    //    //RevertAllocHook();
+    //    //return; // no applicable results to use or debugger not attached
+    //}
 
+    // Deserialize allocation number and test destription
+    // Note that his will allocate and its intentional since it allows
+    // us to capture current allocation request serial number from hook.
     std::string test_description;
-    in_ >> break_alloc_;
-    in_ >> test_description;
 
-    const auto description = describe_test(test_info);
-    if (description != test_description)
+    long temp_count = alloc_no;
+    (void)temp_count;
+
+    break_alloc = no_break_alloc;
+    if (in_)
     {
-        in_.close(); // invalidate
-        RevertAllocHook();
-        return;
+        in_ >> test_description;
+        in_ >> break_alloc;
+
+        const auto description = describe_test(test_info);        if (description != test_description)
+        {
+            //RevertAllocHook();
+            in_.close(); // invalidate, prevent further parsing
+            //return;
+            break_alloc = no_break_alloc;
+        }
+    }
+    else
+    {
+        //RevertAllocHook();
     }
 
-    break_alloc = break_alloc_;
-
-    if (break_alloc_ != no_break_alloc)
-    {   // Set allocation no to break on
-         //_CrtSetBreakAlloc(break_alloc_); // TODO This is annoying when debugging
-        break_alloc_ = no_break_alloc;
-    }
+    //if (break_alloc_ != no_break_alloc)
+    //{   // Set allocation no to break on
+    //     //_CrtSetBreakAlloc(break_alloc_); // TODO This is annoying when debugging
+    //    break_alloc_ = no_break_alloc;
+    //}
 
     pointers = { buffer, filename, &line };
     pointers.buffer_ptr[0] = 0;
     pointers.filename_ptr[0] = 0;
 
+    pre_alloc_no = alloc_no;
+    discard = 0;
     discard = false;
-    //break_alloc += discarded;
+
+    // Determine allocation no based on relative information
+    if (break_alloc != no_break_alloc)
+        break_alloc += alloc_no; 
+
+    printf("PRE ALLOC NO: %ld\n", pre_alloc_no);
 }
 
 void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestEnd(
 	const ::testing::TestInfo& test_info)
 {
+    post_alloc_no = alloc_no;
+
+    // Stack trace allocations do not matter since memory leak allocation is that exact allocation request
+    // Anything being allocated after that point only adds to offset of next test
+
+    printf("POST ALLOC NO: %ld\n", post_alloc_no);
+    printf("DIFF ALLOC NO: %ld\n", (post_alloc_no - pre_alloc_no)); 
+    printf("PRE TRACE: %ld\n", pre_trace_no);
+    printf("POST TRACE: %ld\n", post_trace_no);
+    printf("TRACE: %ld\n", (post_trace_no - pre_trace_no));
+
     pointers = trace_pointers();
 
     if (alloc_hook_set_)
@@ -519,6 +584,8 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestEnd(
     // reporting assertion failures due to memory allocation within gtest 
     // framework (bad).
 
+    parsed_alloc_no = no_break_alloc;
+
     auto leak_detected = false;
     if (test_info.result()->Passed())
     {
@@ -529,6 +596,8 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestEnd(
         leak_detected = _CrtMemDifference(&mem_diff, &pre_state_, &post_state) != 0;
         if (leak_detected)
         {
+            //printf("MEM DIFF OFFSET: %ld", post_state.pBlockHeader->lRequest - pre_state_.pBlockHeader->lRequest);
+
             // Dump objects and statistics via redirect hook
             // This indirectly sets parsed_alloc_no
             //std::cerr << "Failure: Memory leak detected.\n\n";
@@ -541,13 +610,13 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestEnd(
                 // IMPORTANT: Remember that this function must have noexcept/nothrow semantics
                 //            since indirectly called by C-run-time.
                 auto result = TRUE;
-                if (stored_report_hook)
+                if (stored_report_hook) // fwd call
                     result = stored_report_hook(reportType, message, returnValue);
                 if (parsed_alloc_no != no_break_alloc)
                     return result; // already parsed on earlier invocation
                 if (message)
-                    TryParseAllocNo(parsed_alloc_no, message);
-                //fprintf(stderr, message); // avoid std::cerr since CRT callback
+                    TryParseAllocNo(parsed_alloc_no, message); // TODO can be void
+                fprintf(stderr, message); // avoid std::cerr since CRT callback
                 return result;
             };
 
@@ -576,8 +645,15 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestEnd(
     // potentially allocates memory on its own for stream buffers.
 	if (out_)
 	{
-        out_ << parsed_alloc_no << '\n';		
+        long relative_alloc_no = no_break_alloc;
+        if (parsed_alloc_no != no_break_alloc)
+            relative_alloc_no = parsed_alloc_no - pre_alloc_no;
+
+        printf("PARSED ALLOC NO: %ld\n", parsed_alloc_no);
+        printf("RELATIVE: %ld\n", relative_alloc_no);
+
         out_ << describe_test(test_info) << '\n';
+        out_ << relative_alloc_no << '\n';
 	}
 
     // Fail test only if not failed due to assertion and a leak
@@ -590,7 +666,6 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Fail()
 {
     std::stringstream ss;
     ss << "Memory leak detected in scope of this test.";
-    ss << "discarded: " << discarded << "\n";
     if (parsed_alloc_no != no_break_alloc)
         ss << "\n- Allocation request no: " << parsed_alloc_no;
     if (buffer[0] != '\0')
@@ -629,9 +704,8 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::OnTestProgramEnd(
 	out_.close();
 
     // Clean-up temporary files
-	std::remove(GTEST_MEMLEAK_DETECTOR_FILENAME);
-	std::rename(GTEST_MEMLEAK_DETECTOR_TEMP_FILENAME, 
-                GTEST_MEMLEAK_DETECTOR_FILENAME);
+	std::remove(file_path.c_str());
+	std::rename(temp_file_path.c_str(), file_path.c_str());
 }
 
 #endif // GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE

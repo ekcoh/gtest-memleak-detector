@@ -13,6 +13,15 @@
 // This is typically defined in its own file, but defined here to reduce complexity of example
 int main(int argc, char **argv)
 {
+    // --gtest_filter=example_01_memory_leak_detection.forgetting_to_cleanup_allocation_with_malloc_will_leak_memory
+    // --gtest_filter=example_01_memory_leak_detection.forgetting_to_cleanup_allocation_with_new_will_leak_memory:example_01_memory_leak_detection.forgetting_to_cleanup_allocation_with_malloc_will_leak_memory
+
+    for (int i = 0; i < argc; ++i)
+    {
+        const char* arg = argv[i];
+        std::cout << i << ":" << argv[i] << "\n";
+    }
+
 	::testing::InitGoogleTest(&argc, argv);
 	::testing::UnitTest::GetInstance()->listeners().Append(
 		new gtest_memleak_detector::MemoryLeakDetectorListener(argc, argv));

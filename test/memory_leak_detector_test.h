@@ -14,7 +14,8 @@ using namespace gtest_memleak_detector;
 enum class allocation_type
 {
     new_delete,
-    malloc_free
+    malloc_free,
+    heap_alloc_free
 };
 
 enum class expected_outcome
@@ -26,6 +27,7 @@ enum class expected_outcome
 class memory_leak_detector_test : public ::testing::Test
 {
 public:
+    memory_leak_detector_test();
     virtual ~memory_leak_detector_test() noexcept = default;
 
     virtual void SetUp();

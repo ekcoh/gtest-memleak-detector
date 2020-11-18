@@ -4,6 +4,23 @@
 
 #include "memory_leak_detector_test.h"
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#pragma warning( push )
+// warning C5039: potentially throwing function passed to extern C function 
+// under -EHc. May result in undefined behavior.
+#pragma warning( disable : 5039 ) 
+#include <Windows.h>
+#pragma warning( pop )
+
+char* argv[] = { "test.exe" };
+
+memory_leak_detector_test::memory_leak_detector_test()
+    : detector(1, argv)
+{ }
+
 void memory_leak_detector_test::SetUp()
 {
     p_ = nullptr;
@@ -11,7 +28,7 @@ void memory_leak_detector_test::SetUp()
 
 void memory_leak_detector_test::TearDown()
 {
-    // empty
+    std::remove("test.exe.gt.memleaks");
 }
 
 void memory_leak_detector_test::GivenPreTestSequence()
@@ -35,6 +52,9 @@ void memory_leak_detector_test::GivenMemoryAllocated(allocation_type method)
 {
     switch (method)
     {
+    case allocation_type::heap_alloc_free:
+        p_ = static_cast<int*>(::HeapAlloc(GetProcessHeap(), 0, sizeof(int)));
+        break;
     case allocation_type::malloc_free:
         p_ = static_cast<int*>(malloc(sizeof(int)));
         break;
@@ -51,6 +71,9 @@ void memory_leak_detector_test::GivenMemoryFreed(allocation_type method)
 
     switch (method)
     {
+    case allocation_type::heap_alloc_free:
+        HeapFree(GetProcessHeap(), 0, p_);
+        break;
     case allocation_type::malloc_free:
         free(p_);
         break;

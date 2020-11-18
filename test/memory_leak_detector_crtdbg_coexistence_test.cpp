@@ -94,16 +94,28 @@ private:
     static unsigned alloc_hook_call_count;
     static unsigned report_hook_call_count;
     
-    static int AllocHook(int /*nAllocType*/, void* /*pvData*/,
-        size_t /*nSize*/, int /*nBlockUse*/, long /*lRequest*/,
-        const unsigned char* /*szFileName*/, int /*nLine*/) noexcept
+    static int AllocHook(int nAllocType, void* pvData,
+        size_t nSize, int nBlockUse, long lRequest,
+        const unsigned char* szFileName, int nLine) noexcept
     {
+        (void)nAllocType;
+        (void)pvData;
+        (void)nSize;
+        (void)nBlockUse;
+        (void)lRequest;
+        (void)szFileName;
+        (void)nLine;
+
         ++alloc_hook_call_count;
         return 1; // TRUE - indicates success
     }
 
-    static int ReportHook(int /*reportType*/, char* /*message*/, int* /*returnValue*/) noexcept
+    static int ReportHook(int reportType, char* message, int* returnValue) noexcept
     {
+        (void)reportType;
+        (void)message;
+        (void)returnValue;
+
         ++report_hook_call_count;
         return 1; // TRUE - indicates success
     }
