@@ -8,7 +8,7 @@
 #include <gtest_memleak_detector/gtest_memleak_detector.h>
 
 // Memory debugging tools (MSVC only)
-#if defined(_DEBUG) && defined(_MSC_VER)
+#if defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
 #define GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
 #define GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE
 	
@@ -21,51 +21,52 @@
 #include <fstream>       // std::ifstream, std::ofstream
 #include <unordered_map> // std::unordered_map
 
-namespace gtest_memleak_detector
+namespace gtest_memleak_detector {
+
+class MemoryLeakDetectorListener::Impl
 {
-    class MemoryLeakDetectorListener::Impl
-    {
-    public:
-	    Impl(int argc, char** argv0);
-	    ~Impl() noexcept = default;
+public:
+	Impl(int argc, char** argv0);
+	~Impl() noexcept = default;
 
-        const Impl(const Impl&) = delete;
-        const Impl(Impl&&) noexcept = delete;
-        Impl& operator=(const Impl&) = delete;
-        Impl& operator=(Impl&&) = delete;
+    const Impl(const Impl&) = delete;
+    const Impl(Impl&&) noexcept = delete;
+    Impl& operator=(const Impl&) = delete;
+    Impl& operator=(Impl&&) = delete;
 
-	    void OnTestProgramStart(const ::testing::UnitTest& unit_test);
-	    void OnTestStart(const ::testing::TestInfo& test_info);
-	    void OnTestEnd(const ::testing::TestInfo& test_info);
-	    void OnTestProgramEnd(const ::testing::UnitTest& unit_test);
-	
-    private:
-        static int AllocHook(int nAllocType, void* pvData,
-            size_t nSize, int nBlockUse, long lRequest,
-            const unsigned char* szFileName, int nLine) noexcept;
+	void OnTestStart(std::function<std::string()> descriptor);
+	void OnTestEnd(std::function<std::string()> descriptor, bool passed);
 
-        static bool TryParseAllocNo(long& dst, const char* str) noexcept;
+    //void SetFailureCallback(std::function<void(const char*)> callback);
 
-        bool ReadAndCompare(int argc, char** argv);
-        
-        void SetAllocHook();
-        void RevertAllocHook();
+    void WriteDatabase();
+private:
+    static int AllocHook(int nAllocType, void* pvData,
+        size_t nSize, int nBlockUse, long lRequest,
+        const unsigned char* szFileName, int nLine) noexcept;
 
-        void Fail();
+    static bool TryParseAllocNo(long& dst, const char* str) noexcept;
+    long ParseMemLeakAllocNo(_CrtMemState& mem_diff) const noexcept;
+    
+    bool ReadDatabase();
+    bool TryReadDatabase();
 
-	    std::ifstream   in_;
-	    std::ofstream   out_;
-        _CrtMemState    pre_state_;
-        bool            alloc_hook_set_;
-        //long            break_alloc_;
-        struct _stat    file_info_;
-        char            buffer[GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH]{ 0 };
-        char            filename[GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH]{ 0 };
-        unsigned long   line;
-        std::string     temp_file_path;
-        std::string     file_path;
-        std::unordered_map<std::string, long> db;
-    };
+    void SetAllocHook();
+    void RevertAllocHook();
+
+    _CrtMemState    pre_state_;
+    int             stored_debug_flags_;
+    bool            alloc_hook_set_;
+    struct _stat    file_info_;
+    char            buffer[GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH]{ 0 };
+    char            filename[GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH]{ 0 };
+    unsigned long   line;
+    std::string     file_path;
+    std::unordered_map<std::string, long> db_;
+    std::vector<std::string> rerun_filter_;
+    //std::function<void(const char* message)> fail_;
+};
+
 } // namespace gtest_memleak_detector
 
 #else
@@ -74,7 +75,7 @@ namespace gtest_memleak_detector
 #pragma message ( \
 	"WARNING: Memory leak detection not supported by this compiler/configuration/" \
 	"platform combination. All memory leak assertions will be disabled. " \
-	"This may be caused by a non-debug build, e.g. release build.")
+	"This is expected for non-debug builds, e.g. release build.")
 #endif // _MSC_VER
 
 namespace gtest_memleak_detector
@@ -82,6 +83,6 @@ namespace gtest_memleak_detector
 	class MemoryLeakDetectorListener::Impl { };
 } // namespace gtest_memleak_detector
 
-#endif // defined(_DEBUG) && defined(_MSC_VER)
+#endif // defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
 
 #endif // GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_H

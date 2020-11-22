@@ -39,13 +39,34 @@ if(NOT stackwalker_POPULATED)
 endif()
 
 ###################################################################################################
+# Download and unpack Google Test at configure time if not already available.
+# If made available by parent project use that version and configuration instead.
+# Currently using release 1.10.0 (October 2019)
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG        release-1.10.0
+)
+FetchContent_GetProperties(googletest)
+if(NOT googletest_POPULATED)
+  FetchContent_Populate(googletest)
+  if (WIN32)
+    # Prevent overriding the parent project's compiler/linker
+    # settings on Windows
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  endif()
+  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+endif()
+
+###################################################################################################
 # library
 ###################################################################################################
 
 # We want to build this as static to use debug heap
 add_library(${PROJECT_NAME} STATIC
 	"include/gtest_memleak_detector/gtest_memleak_detector.h"
-)
+    "src/trace.cpp" 
+    "src/trace.hpp")
 add_subdirectory(src)
 gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} 

@@ -46,6 +46,17 @@ TEST(example_01_memory_leak_detection,
 }
 
 TEST(example_01_memory_leak_detection,
+    in_case_of_multiple_memory_leaks_only_the_first_leak_is_reported)
+{
+    // ptr_1 and ptr_2 are never deallocated and will leak
+    // (multiple - only first one reported)
+    auto ptr_1 = new int(5);
+    auto ptr_2 = new int(7); // will not be reported
+    EXPECT_EQ(*ptr_1, 5);
+    EXPECT_EQ(*ptr_2, 7);
+}
+
+TEST(example_01_memory_leak_detection,
 	forgetting_to_cleanup_allocation_with_new_will_leak_memory)
 {
     // ptr is never deallocated and will leak

@@ -10,30 +10,12 @@ include(GoogleTest)
 enable_testing()
 
 ###################################################################################################
-# Download and unpack Google Test at configure time if not already available.
-# If made available by parent project use that version and configuration instead.
-# Git name used as FetchContent package name.
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        release-1.10.0
-)
-FetchContent_GetProperties(googletest)
-if(NOT googletest_POPULATED)
-  FetchContent_Populate(googletest)
-  if (WIN32)
-    # Prevent overriding the parent project's compiler/linker settings on Windows
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  endif()
-  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
-endif()
-
-###################################################################################################
 # Unit tests
 add_executable(${PROJECT_NAME}_unit_tests
 	main.cpp
 	memory_leak_detector_test.cpp
 	memory_leak_detector_assertion_tests.cpp
+    memory_leak_detector_helper_tests.cpp
 )
 gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME}_unit_tests)
 target_link_libraries(${PROJECT_NAME}_unit_tests

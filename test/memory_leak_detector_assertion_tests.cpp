@@ -8,12 +8,22 @@
 
 #include "memory_leak_detector_test.h" // fixture
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#pragma warning( push )
+// warning C5039: potentially throwing function passed to extern C function 
+// under -EHc. May result in undefined behavior.
+#pragma warning( disable : 5039 ) 
+#include <Windows.h>
+#pragma warning( pop )
 TEST_F(memory_leak_detector_test, 
     no_leak_should_be_detected__if_freeing_previously_allocated_memory_before_test_end_with_new_delete)
 {
     GivenPreTestSequence();
-	GivenMemoryAllocated(allocation_type::new_delete);
-	GivenMemoryFreed(allocation_type::new_delete);
+    auto* ptr = new int;
+    delete ptr;
     GivenPostTestSequence(expected_outcome::no_mem_leak);
 }
 
@@ -21,8 +31,8 @@ TEST_F(memory_leak_detector_test,
     no_leak_should_be_detected__if_freeing_previously_allocated_memory_before_test_end_with_malloc_free)
 {
     GivenPreTestSequence();
-    GivenMemoryAllocated(allocation_type::malloc_free);
-    GivenMemoryFreed(allocation_type::malloc_free);
+    auto* ptr = malloc(sizeof(double));
+    free(ptr);
     GivenPostTestSequence(expected_outcome::no_mem_leak);
 }
 
@@ -30,8 +40,8 @@ TEST_F(memory_leak_detector_test,
     no_leak_should_be_detected__if_freeing_previously_allocated_memory_before_test_end_with_heap_alloc_free)
 {
     GivenPreTestSequence();
-    GivenMemoryAllocated(allocation_type::heap_alloc_free);
-    GivenMemoryFreed(allocation_type::heap_alloc_free);
+    auto* ptr = HeapAlloc(GetProcessHeap(), 0, 64);
+    HeapFree(GetProcessHeap(), 0, ptr);
     GivenPostTestSequence(expected_outcome::no_mem_leak);
 }
 
@@ -40,9 +50,9 @@ TEST_F(memory_leak_detector_test,
 {
 #ifndef NDEBUG // Only possible to test in debug build
     GivenPreTestSequence();
-    GivenMemoryAllocated(allocation_type::new_delete);
+    auto* ptr = new int;
     GivenPostTestSequence(expected_outcome::mem_leak_failure);
-    GivenMemoryFreed(allocation_type::new_delete); // clean-up
+    delete ptr; // clean-up
 #endif
 }
 
@@ -51,9 +61,9 @@ TEST_F(memory_leak_detector_test,
 {
 #ifndef NDEBUG // Only possible to test in debug build
     GivenPreTestSequence();
-    GivenMemoryAllocated(allocation_type::malloc_free);
+    auto* ptr = malloc(32);
     GivenPostTestSequence(expected_outcome::mem_leak_failure);
-    GivenMemoryFreed(allocation_type::malloc_free); // clean-up
+    free(ptr); // clean-up
 #endif
 }
 
@@ -62,9 +72,9 @@ TEST_F(memory_leak_detector_test,
 {
 #ifndef NDEBUG // Only possible to test in debug build
     GivenPreTestSequence();
-    GivenMemoryAllocated(allocation_type::heap_alloc_free);
+    auto* ptr = HeapAlloc(GetProcessHeap(), 0, 32);
     GivenPostTestSequence(expected_outcome::mem_leak_failure);
-    GivenMemoryFreed(allocation_type::heap_alloc_free); // clean-up
+    HeapFree(GetProcessHeap(), 0, ptr); // clean-up
 #endif
 }
 

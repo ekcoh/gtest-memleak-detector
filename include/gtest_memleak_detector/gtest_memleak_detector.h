@@ -52,16 +52,40 @@ public:
 	MemoryLeakDetectorListener(int argc = 0, char** argv = nullptr);
 	virtual ~MemoryLeakDetectorListener();
 
-	virtual void OnTestProgramStart(
+	MemoryLeakDetectorListener(const MemoryLeakDetectorListener&) = delete;
+	MemoryLeakDetectorListener(MemoryLeakDetectorListener&&) = delete;
+
+	MemoryLeakDetectorListener& operator=(
+		const MemoryLeakDetectorListener&) = delete;
+	MemoryLeakDetectorListener& operator=(
+		MemoryLeakDetectorListener&&) = delete;
+
+	void OnTestProgramStart(
 		const ::testing::UnitTest& unit_test) override;
-	virtual void OnTestStart(
+	void OnTestStart(
 		const ::testing::TestInfo& test_info) override;
-	virtual void OnTestEnd(
+	void OnTestEnd(
 		const ::testing::TestInfo& test_info) override;
-	virtual void OnTestProgramEnd(
+	void OnTestProgramEnd(
 		const ::testing::UnitTest& unit_test) override;
+
+	static std::string MakeDatabaseFilePath(const char* binary_file_path);
+	static std::string MakeFailureMessage(long leak_alloc_no,
+		const char* leak_file, 
+		unsigned long leak_line, 
+		const char* leak_trace);
+
+	static const char* database_file_suffix; // TODO Consider removing!?
 private:
+    static std::string DescribeTest(const ::testing::TestInfo& test_info);
+    
+    static void FailCurrentTest(long leak_alloc_no, 
+		const char* leak_file, 
+		unsigned long leak_line, 
+		const char* leak_trace);
+
 	class Impl;
+	friend class Impl;
 	std::unique_ptr<Impl> impl_; 
 };
 

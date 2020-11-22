@@ -15,75 +15,36 @@
 #include <Windows.h>
 #pragma warning( pop )
 
+const char* test_binary_path = "test.exe";
 char* argv[] = { "test.exe" };
 
 memory_leak_detector_test::memory_leak_detector_test()
     : detector(1, argv)
 { }
 
-void memory_leak_detector_test::SetUp()
-{
-    p_ = nullptr;
-}
-
 void memory_leak_detector_test::TearDown()
 {
-    std::remove("test.exe.gt.memleaks");
+    std::remove(MemoryLeakDetectorListener::MakeDatabaseFilePath(test_binary_path).c_str());
 }
 
 void memory_leak_detector_test::GivenPreTestSequence()
-{
+{   // This is equivalent to the sequence executed by google test when
+    // executing test
     detector.OnTestProgramStart(instance());
     detector.OnTestSuiteStart(*instance().current_test_suite());
     detector.OnTestStart(*instance().current_test_info());
 }
 
-void memory_leak_detector_test::GivenPostTestSequence(expected_outcome action)
-{
+void memory_leak_detector_test::GivenPostTestSequence(expected_outcome action, 
+    const char* failure_message)
+{   // This is equivalent to the sequence executed by google test when
+    // executing tests but asserts failure based on action.
     if (action == expected_outcome::mem_leak_failure)
-        EXPECT_NONFATAL_FAILURE(EndTest(), "Memory leak detected");
+        EXPECT_NONFATAL_FAILURE(EndTest(), failure_message);
     else
         EndTest();
     detector.OnTestSuiteEnd(*instance().current_test_suite());
     detector.OnTestProgramEnd(instance());
-}
-
-void memory_leak_detector_test::GivenMemoryAllocated(allocation_type method)
-{
-    switch (method)
-    {
-    case allocation_type::heap_alloc_free:
-        p_ = static_cast<int*>(::HeapAlloc(GetProcessHeap(), 0, sizeof(int)));
-        break;
-    case allocation_type::malloc_free:
-        p_ = static_cast<int*>(malloc(sizeof(int)));
-        break;
-    case allocation_type::new_delete:
-    default:
-        p_ = new int();
-        break;
-    }
-}
-
-void memory_leak_detector_test::GivenMemoryFreed(allocation_type method)
-{
-    if (!p_) return;
-
-    switch (method)
-    {
-    case allocation_type::heap_alloc_free:
-        HeapFree(GetProcessHeap(), 0, p_);
-        break;
-    case allocation_type::malloc_free:
-        free(p_);
-        break;
-    case allocation_type::new_delete:
-    default:
-        delete p_;
-        break;
-    }
-
-    p_ = nullptr;
 }
 
 void memory_leak_detector_test::EndTest()

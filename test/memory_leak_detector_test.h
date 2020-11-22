@@ -6,17 +6,9 @@
 #define GTEST_MEMLEAK_DETECTOR_TEST_H
 
 #include <gtest_memleak_detector/gtest_memleak_detector.h>
-
 #include <gtest/gtest-spi.h> // enables testing test failures
 
 using namespace gtest_memleak_detector;
-
-enum class allocation_type
-{
-    new_delete,
-    malloc_free,
-    heap_alloc_free
-};
 
 enum class expected_outcome
 {
@@ -29,24 +21,23 @@ class memory_leak_detector_test : public ::testing::Test
 public:
     memory_leak_detector_test();
     virtual ~memory_leak_detector_test() noexcept = default;
+    memory_leak_detector_test(const memory_leak_detector_test&) = delete;
+    memory_leak_detector_test& operator=(const memory_leak_detector_test&) = delete;
+    memory_leak_detector_test(memory_leak_detector_test&&) = delete;
+    memory_leak_detector_test& operator=(memory_leak_detector_test&&) = delete;
 
-    virtual void SetUp();
-    virtual void TearDown();
+    void TearDown() override;
 
     void GivenPreTestSequence();
-    void GivenPostTestSequence(expected_outcome action);
+    void GivenPostTestSequence(expected_outcome action, 
+        const char* failure_message = "Memory leak detected.");
 
-    void GivenMemoryAllocated(allocation_type method);
-    void GivenMemoryFreed(allocation_type method);
-
+protected:
     MemoryLeakDetectorListener detector;
 
 private:
     void EndTest();
-    testing::UnitTest& instance();
-
-    bool expect_memory_leak_;
-    int* p_;
+    static testing::UnitTest& instance();
 };
 
 #endif // GTEST_MEMLEAK_DETECTOR_TEST_H
