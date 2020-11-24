@@ -65,8 +65,7 @@ endif()
 # We want to build this as static to use debug heap
 add_library(${PROJECT_NAME} STATIC
 	"include/gtest_memleak_detector/gtest_memleak_detector.h"
-    "src/trace.cpp" 
-    "src/trace.hpp")
+)
 add_subdirectory(src)
 gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} 

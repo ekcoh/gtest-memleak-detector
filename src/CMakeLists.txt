@@ -7,6 +7,5 @@ target_sources(${PROJECT_NAME}
 		"${CMAKE_CURRENT_LIST_DIR}/memory_leak_detector_listener.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/memory_leak_detector_listener_impl.cpp"
 		"${CMAKE_CURRENT_LIST_DIR}/memory_leak_detector_listener_impl.h"
-		"${CMAKE_CURRENT_LIST_DIR}/trace.cpp"
-		"${CMAKE_CURRENT_LIST_DIR}/trace.hpp"
+        "${CMAKE_CURRENT_LIST_DIR}/memory_leak_detector_stacktrace.cpp"
 )

@@ -3,7 +3,6 @@
 // found in the root directory of this distribution..
 
 #include <gtest_memleak_detector/gtest_memleak_detector.h>
-
 #include "memory_leak_detector_listener_impl.h"
 
 const char* gtest_memleak_detector::MemoryLeakDetectorListener::database_file_suffix
