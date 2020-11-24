@@ -7,6 +7,11 @@
 
 #include <gtest_memleak_detector/gtest_memleak_detector.h>
 
+// Memory debugging tools (MSVC only)
+#if defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
+#define GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
+#define GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE
+
 #pragma warning( push )
 // warning C5039: potentially throwing function passed to extern C function 
 // under -EHc. May result in undefined behavior.
@@ -22,11 +27,6 @@
 #undef WIN32_LEAN_AND_MEAN // cleanup
 #endif // WIN32_LEAN_AND_MEAN
 
-// Memory debugging tools (MSVC only)
-#if defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
-#define GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
-#define GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE
-	
 // CRT debug tools
 #ifndef _CRTDBG_MAP_ALLOC
 #define _CRTDBG_MAP_ALLOC
@@ -36,45 +36,30 @@
 #include <fstream>       // std::ifstream, std::ofstream
 #include <unordered_map> // std::unordered_map
 
+namespace gtest_memleak_detector {
+
 ///////////////////////////////////////////////////////////////////////////////
-// _CrtMemBlockHeader
-//
-// This normally opaque struct is vaguely documented here:
-// https://docs.microsoft.com/en-us/visualstudio/debugger/crt-debug-heap-details?view=vs-2019
-//
-// Note that we are only interested in request counter so other fields are only
-// relevant for getting padding right.
+// Buffer
 ///////////////////////////////////////////////////////////////////////////////
 
-typedef struct _CrtMemBlockHeader
+struct Buffer
 {
-    struct _CrtMemBlockHeader * pBlockHeaderNext;
-    struct _CrtMemBlockHeader * pBlockHeaderPrev;
-    char *                      szFileName;
-    int                         nLine;
-#ifdef _WIN64
-    // These items are reversed on Win64 to eliminate gaps in the struct
-    // and ensure that sizeof(struct)%16 == 0, so 16-byte alignment is
-    // maintained in the debug heap.
-    int                         nBlockUse;
-    size_t                      nDataSize;
-#else  /* _WIN64 */
-    size_t                      nDataSize;
-    int                         nBlockUse;
-#endif  /* _WIN64 */
-    long                        lRequest;
-    // Further members not necessary
-} _CrtMemBlockHeader;
-
-struct trace_pointers
-{
-    char* buffer_ptr = nullptr;
-    char* buffer_end_ptr = nullptr;
-    char* filename_ptr = nullptr;
-    unsigned long* line_ptr = nullptr;
+    char  data[GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH]{ 0 };
+    char* last = nullptr;
+    char* end = nullptr;
 };
 
-namespace gtest_memleak_detector {
+///////////////////////////////////////////////////////////////////////////////
+// Location
+///////////////////////////////////////////////////////////////////////////////
+
+struct Location
+{
+    static constexpr unsigned long invalid_line = 
+        static_cast<unsigned long>(-1);
+    char            file[GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH]{ 0 };
+    unsigned long   line = invalid_line;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // StackTrace
@@ -84,7 +69,7 @@ class StackTrace final : public StackWalker
 {
 private:
     static constexpr size_t max_path = GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH;
-
+    
     enum class State
     {
         Pre,
@@ -92,9 +77,7 @@ private:
         Post
     };
 public:
-    StackTrace(char* buffer, char* buffer_end, char* filename, unsigned long* line, const char* hook_file);
-
-    const char* Value() const noexcept;
+    StackTrace(Buffer* buffer, Location* location, const char* hook_file);
 
 protected:
     static void Copy(char* dst, const char* src) noexcept;
@@ -107,16 +90,11 @@ protected:
         LPCSTR szFuncName, DWORD gle, DWORD64 addr) override;
 
 private:
-    char*  buffer;
-    char*  buffer_last;
-    char*  buffer_end;
-    char*  filename;
+    Buffer*     buffer;
+    Location*   location;
     const char* hook_file;
-    DWORD* line;
-    bool   suppress;
-    bool   cpp_trace_found;
-    bool   next_cpp_trace_found;
-    State  state;
+    State       state;
+    bool        suppress;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -134,8 +112,8 @@ public:
     Impl& operator=(const Impl&) = delete;
     Impl& operator=(Impl&&) = delete;
 
-	void OnTestStart(std::function<std::string()> descriptor);
-	void OnTestEnd(std::function<std::string()> descriptor, bool passed);
+	void Start(std::function<std::string()> descriptor);
+	void End(std::function<std::string()> descriptor, bool passed);
 
     //void SetFailureCallback(std::function<void(const char*)> callback);
 
@@ -158,9 +136,8 @@ private:
     int             stored_debug_flags_;
     bool            alloc_hook_set_;
     struct _stat    file_info_;
-    char            buffer[GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH]{ 0 };
-    char            filename[GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH]{ 0 };
-    unsigned long   line;
+    Buffer          buffer;
+    Location        location;
     std::string     file_path;
     std::unordered_map<std::string, long> db_;
     std::vector<std::string> rerun_filter_;

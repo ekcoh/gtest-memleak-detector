@@ -60,6 +60,7 @@ A complete example of the basic setup can be found in
 ## Known Limitations
 - It would make sense to make memory leak suppression in case of failed assertions optional,
   but at the time being it is mandatory since GTest allocates memory during assertion failures.
+- Only ANSI filenames are currently supported. This means that proper UNICODE support is currently missing.
 
 ## License
 

@@ -46,7 +46,7 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::OnTestStart(
     //            until memory checkpoint has been established.
     //            If string would be allocated here it would be reported as a
     //            memory leak which would be a false positive.
-	impl_->OnTestStart([&]() { return DescribeTest(test_info); });
+	impl_->Start([&]() { return DescribeTest(test_info); });
 }
 #else
 void gtest_memleak_detector::MemoryLeakDetectorListener::OnTestStart(
@@ -61,7 +61,7 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::OnTestEnd(
     //            until memory checkpoint has been established.
     //            If string would be allocated here it would be reported as a
     //            memory leak which would be a false positive.
-    impl_->OnTestEnd([&]() { return DescribeTest(test_info); },
+    impl_->End([&]() { return DescribeTest(test_info); },
         test_info.result()->Passed());
 }
 #else

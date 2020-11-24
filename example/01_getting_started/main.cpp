@@ -10,6 +10,11 @@
 #include <gtest/gtest.h>
 #include <gtest_memleak_detector/gtest_memleak_detector.h>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
+
 // This is typically defined in its own file, but defined here to reduce complexity of example
 int main(int argc, char **argv)
 {
@@ -74,3 +79,41 @@ TEST(example_01_memory_leak_detection,
 	*ptr = 5;
 	EXPECT_EQ(*ptr, 5);
 }
+
+TEST(example_01_memory_leak_detection,
+    forgetting_to_cleanup_multiple_allocations_with_malloc_will_leak_memory)
+{
+    // ptr is never freed and will leak
+    // (memory leak reported)
+    auto p1 = static_cast<int*>(malloc(sizeof(int)));
+    *p1 = 5;
+    auto p2 = static_cast<int*>(malloc(sizeof(int)));
+    *p2 = 7;
+    EXPECT_EQ(*p1, 5);
+    EXPECT_EQ(*p2, 7);
+}
+
+TEST(example_01_memory_leak_detection,
+    forgetting_to_cleanup_allocation_with_realloc_will_leak_memory)
+{
+    // ptr is never freed and will leak
+    // (memory leak reported)
+    auto ptr = static_cast<int*>(malloc(sizeof(int)));
+    *ptr = 5;
+    ptr = static_cast<int*>(realloc(ptr, 32));
+    EXPECT_EQ(*ptr, 5);
+}
+
+#ifdef _WIN32
+
+TEST(example_01_memory_leak_detection,
+    forgetting_to_cleanup_allocation_with_heap_alloc_will_leak_memory)
+{
+    // ptr is never freed and will leak
+    // (memory leak reported)
+    auto ptr = static_cast<int*>(HeapAlloc(GetProcessHeap(), 0, 3200));
+    *ptr = 5;
+    EXPECT_EQ(*ptr, 5);
+}
+
+#endif
