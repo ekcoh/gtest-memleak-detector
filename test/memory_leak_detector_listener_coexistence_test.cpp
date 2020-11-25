@@ -12,15 +12,15 @@
 
 #include <gtest_memleak_detector/gtest_memleak_detector.h>
 
-#include "memory_leak_detector_test.h"
+#include "memory_leak_detector_listener_test.h"
 
 using namespace gtest_memleak_detector;
 
-class memory_leak_detector_crtdbg_coexistence_test : public memory_leak_detector_test
+class memory_leak_detector_crtdbg_coexistence_test : public memory_leak_detector_listener_test
 {
 public:
     memory_leak_detector_crtdbg_coexistence_test()
-        : memory_leak_detector_test()
+        : memory_leak_detector_listener_test()
         , alloc_hook_installed(false)
         , report_hook_installed(false)
         , stored_alloc_hook(nullptr)
@@ -28,7 +28,7 @@ public:
 
     void SetUp() override
     {
-        memory_leak_detector_test::SetUp();
+        memory_leak_detector_listener_test::SetUp();
 
         _CrtSetDbgFlag(_crtDbgFlag | (_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF));
         alloc_hook_call_count = 0u;
@@ -39,7 +39,7 @@ public:
     {
         GivenReportHookUninstalled();
 
-        memory_leak_detector_test::TearDown();
+        memory_leak_detector_listener_test::TearDown();
     }
 
 protected:

@@ -16,15 +16,15 @@ enum class expected_outcome
     mem_leak_failure
 };
 
-class memory_leak_detector_test : public ::testing::Test
+class memory_leak_detector_listener_test : public ::testing::Test
 {
 public:
-    memory_leak_detector_test();
-    virtual ~memory_leak_detector_test() noexcept = default;
-    memory_leak_detector_test(const memory_leak_detector_test&) = delete;
-    memory_leak_detector_test& operator=(const memory_leak_detector_test&) = delete;
-    memory_leak_detector_test(memory_leak_detector_test&&) = delete;
-    memory_leak_detector_test& operator=(memory_leak_detector_test&&) = delete;
+    memory_leak_detector_listener_test();
+    virtual ~memory_leak_detector_listener_test() noexcept = default;
+    memory_leak_detector_listener_test(const memory_leak_detector_listener_test&) = delete;
+    memory_leak_detector_listener_test& operator=(const memory_leak_detector_listener_test&) = delete;
+    memory_leak_detector_listener_test(memory_leak_detector_listener_test&&) = delete;
+    memory_leak_detector_listener_test& operator=(memory_leak_detector_listener_test&&) = delete;
 
     void SetUp() override;
     void TearDown() override;

@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "memory_leak_detector_test.h" // fixture
+#include "memory_leak_detector_listener_test.h" // fixture
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -21,7 +21,7 @@
 
 // No leak test cases
 
-TEST_F(memory_leak_detector_test, 
+TEST_F(memory_leak_detector_listener_test, 
     no_leak_should_be_detected__if_freeing_previously_allocated_memory_before_test_end_with_new_delete)
 {
     GivenPreTestSequence();
@@ -30,7 +30,7 @@ TEST_F(memory_leak_detector_test,
     GivenPostTestSequence(expected_outcome::no_mem_leak);
 }
 
-TEST_F(memory_leak_detector_test,
+TEST_F(memory_leak_detector_listener_test,
     no_leak_should_be_detected__if_freeing_previously_allocated_memory_before_test_end_with_malloc_free)
 {
     GivenPreTestSequence();
@@ -39,7 +39,7 @@ TEST_F(memory_leak_detector_test,
     GivenPostTestSequence(expected_outcome::no_mem_leak);
 }
 
-TEST_F(memory_leak_detector_test,
+TEST_F(memory_leak_detector_listener_test,
     no_leak_should_be_detected__if_freeing_previously_allocated_memory_before_test_end_with_heap_alloc_free)
 {
     GivenPreTestSequence();
@@ -50,7 +50,7 @@ TEST_F(memory_leak_detector_test,
 
 // Leaking test cases
 
-TEST_F(memory_leak_detector_test,
+TEST_F(memory_leak_detector_listener_test,
     leak_should_be_detected__if_not_freeing_previously_allocated_memory_before_test_end_with_new_delete)
 {
 #ifndef NDEBUG // Only possible to test in debug build
@@ -61,7 +61,7 @@ TEST_F(memory_leak_detector_test,
 #endif
 }
 
-TEST_F(memory_leak_detector_test,
+TEST_F(memory_leak_detector_listener_test,
     leak_should_be_detected__if_not_freeing_previously_allocated_memory_before_test_end_with_malloc_free)
 {
 #ifndef NDEBUG // Only possible to test in debug build
@@ -72,7 +72,7 @@ TEST_F(memory_leak_detector_test,
 #endif
 }
 
-TEST_F(memory_leak_detector_test,
+TEST_F(memory_leak_detector_listener_test,
     leak_should_be_detected__if_not_freeing_previously_allocated_memory_before_test_end_with_heap_alloc_free)
 {
 #ifndef NDEBUG // Only possible to test in debug build

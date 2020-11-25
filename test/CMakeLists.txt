@@ -13,10 +13,9 @@ enable_testing()
 # Unit tests
 add_executable(${PROJECT_NAME}_unit_tests
 	main.cpp
-	memory_leak_detector_test.cpp
-	memory_leak_detector_assertion_tests.cpp
-    memory_leak_detector_helper_tests.cpp
-    memory_leak_detector_impl_test.cpp
+	memory_leak_detector_listener_test.cpp
+	memory_leak_detector_listener_assertion_test.cpp
+    memory_leak_detector_test.cpp
 )
 gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME}_unit_tests)
 target_link_libraries(${PROJECT_NAME}_unit_tests
@@ -35,8 +34,8 @@ add_test(NAME ${PROJECT_NAME}_unit_tests COMMAND ${PROJECT_NAME}_unit_tests )
 # CRTDBG Coexistence tests to verify detector is operational if other CRTDBG hooks are active
 add_executable(${PROJECT_NAME}_coexistence_tests
 	main.cpp
-	memory_leak_detector_test.cpp
-	memory_leak_detector_crtdbg_coexistence_test.cpp
+	memory_leak_detector_listener_test.cpp
+	memory_leak_detector_listener_coexistence_test.cpp
 )
 gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME}_coexistence_tests)
 add_definitions(-DINCLUDE_CRT)
