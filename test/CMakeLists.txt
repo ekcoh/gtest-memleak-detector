@@ -27,7 +27,8 @@ target_include_directories(${PROJECT_NAME}_unit_tests
     PRIVATE "../src"
     PRIVATE ${stackwalker_SOURCE_DIR}/Main # Incorrectly setup by StackWalker CMake
 )
-add_test(NAME ${PROJECT_NAME}_unit_tests COMMAND ${PROJECT_NAME}_unit_tests )
+gtest_discover_tests(${PROJECT_NAME}_unit_tests XML_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+#add_test(NAME ${PROJECT_NAME}_unit_tests COMMAND ${PROJECT_NAME}_unit_tests )
 #gtest_discover_tests(${PROJECT_NAME}_unit_tests)
 
 ###################################################################################################
@@ -43,5 +44,5 @@ target_link_libraries(${PROJECT_NAME}_coexistence_tests
 	PRIVATE ${PROJECT_NAME}
 	PUBLIC gtest
 )
-add_test(NAME ${PROJECT_NAME}_coexistence_tests COMMAND ${PROJECT_NAME}_coexistence_tests )
-#gtest_discover_tests(${PROJECT_NAME}_coexistence_tests)
+#add_test(NAME ${PROJECT_NAME}_coexistence_tests COMMAND ${PROJECT_NAME}_coexistence_tests )
+gtest_discover_tests(${PROJECT_NAME}_coexistence_tests)

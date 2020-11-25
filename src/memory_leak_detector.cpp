@@ -4,7 +4,7 @@
 
 #include "memory_leak_detector.h"
 
-#ifdef GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE
+//#ifdef GTEST_MEMLEAK_DETECTOR_CRTDBG_AVAILABLE
 
 #include <string>   // std::string
 #include <exception>
@@ -19,7 +19,7 @@ static constexpr long no_break_alloc = -1;
 
 struct test_case_data
 {
-    gtest_memleak_detector::Buffer*   buffer_ptr = nullptr;
+    gtest_memleak_detector::Buffer*   buffer_ptr   = nullptr;
     gtest_memleak_detector::Location* location_ptr = nullptr;
     long pre_alloc_no  = 0;
     long post_alloc_no = 0;
@@ -38,6 +38,8 @@ struct test_case_data
 // Note that we are only interested in request counter so other fields are only
 // relevant for getting padding right.
 ///////////////////////////////////////////////////////////////////////////////
+
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 
 extern "C" {
 
@@ -68,6 +70,8 @@ extern "C" { static _CRT_ALLOC_HOOK stored_alloc_hook = NULL; }
 static test_case_data state;
 static long           alloc_no = 0;
 
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
 ///////////////////////////////////////////////////////////////////////////////
 // gtest_memleak_detector definitions
 ///////////////////////////////////////////////////////////////////////////////
@@ -77,7 +81,9 @@ const char* gtest_memleak_detector::MemoryLeakDetector::database_file_suffix
 
 bool gtest_memleak_detector::MemoryLeakDetector::TryParseAllocNo(
     long& dst, const char* str) noexcept
-{   // IMPORTANT: This function must have noexcept/nothrow semantics
+{   
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+    // IMPORTANT: This function must have noexcept/nothrow semantics
     //            since indirectly called by C-run-time.
     if (!str)
         return false; // nullptr
@@ -105,6 +111,11 @@ bool gtest_memleak_detector::MemoryLeakDetector::TryParseAllocNo(
 
     dst = allocation_no;
     return true; // success
+#else
+    UNREFERENCED_PARAMETER(dst);
+    UNREFERENCED_PARAMETER(str);
+    return false; // disabled
+#endif
 }
 
 gtest_memleak_detector::MemoryLeakDetector::MemoryLeakDetector(
@@ -120,15 +131,19 @@ gtest_memleak_detector::MemoryLeakDetector::MemoryLeakDetector(
     if (argv == nullptr)
         throw std::exception("missing command line arguments");
 
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
     // Set database file path
     file_path = MakeDatabaseFilePath(argv[0]);
 
     // Get test binary file info
-    if (_stat(argv[0], &file_info_) == 0) // TODO THROW instead?!
+    if (_stat(argv[0], &file_info_) == 0)
     {
-        if (!ReadDatabase())
+        if (!TryReadDatabase())
             std::remove(file_path.c_str());
     }
+
+#endif
     
 	// Turn on debug allocation
 	stored_debug_flags_ = _CrtSetDbgFlag(
@@ -181,6 +196,7 @@ std::string gtest_memleak_detector::MemoryLeakDetector::MakeDatabaseFilePath(
 
 bool gtest_memleak_detector::MemoryLeakDetector::ReadDatabase()
 {
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
     // Open file
     std::ifstream in;
     in.open(file_path);
@@ -215,10 +231,14 @@ bool gtest_memleak_detector::MemoryLeakDetector::ReadDatabase()
     }
 
     return true; // success
+#else
+    return false; // disabled
+#endif
 }
 
 bool gtest_memleak_detector::MemoryLeakDetector::TryReadDatabase()
 {
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
     try
     {
         ReadDatabase();
@@ -233,10 +253,14 @@ bool gtest_memleak_detector::MemoryLeakDetector::TryReadDatabase()
     }
     
     return true; // successfully parsed all data
+#else
+    return true; // indicate success but leave db empty
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 }
 
 void gtest_memleak_detector::MemoryLeakDetector::WriteDatabase()
 {
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
     std::ofstream out;
     out.open(file_path);
     out << file_info_.st_size << '\n'
@@ -246,9 +270,11 @@ void gtest_memleak_detector::MemoryLeakDetector::WriteDatabase()
         out << kvp.first << '\n' << kvp.second << '\n';
     out.flush();
     out.close();
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 }
 
-// TODO Convert to extern C
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
 extern "C" int AllocHook(
     int nAllocType, void* pvData,
     size_t nSize, int nBlockUse, long lRequest,
@@ -286,15 +312,20 @@ extern "C" int AllocHook(
     return result;
 }
 
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
 void gtest_memleak_detector::MemoryLeakDetector::SetAllocHook()
 {
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
     assert(alloc_hook_set_ == false);
     stored_alloc_hook = _CrtSetAllocHook(AllocHook);
     alloc_hook_set_ = true;
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 }
 
 void gtest_memleak_detector::MemoryLeakDetector::RevertAllocHook()
 {
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
     assert(alloc_hook_set_ == true);
     // "warning C5039: '_CrtSetAllocHook', false positive
     // Currently no known approach to avoid this.
@@ -304,11 +335,13 @@ void gtest_memleak_detector::MemoryLeakDetector::RevertAllocHook()
     (void)_CrtSetAllocHook(stored_alloc_hook); 
     #pragma warning( pop )
     alloc_hook_set_ = false;
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 }
 
 void gtest_memleak_detector::MemoryLeakDetector::Start(
     std::function<std::string()> descriptor)
 {
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
     state = test_case_data();
     state.buffer_ptr = &buffer;
     state.location_ptr = &location;
@@ -349,7 +382,12 @@ void gtest_memleak_detector::MemoryLeakDetector::Start(
     // Create a memory checkpoint to diff with later to find leaks
     // NOTE: Allocations below will be excluded
     _CrtMemCheckpoint(&pre_state_);
+#else
+    UNREFERENCED_PARAMETER(descriptor);
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 }
+
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 
 bool try_parse_alloc_no(long& dst, const char* str) noexcept
 {
@@ -409,9 +447,13 @@ extern "C" int report_callback(int reportType, char* message, int* returnValue)
     return TRUE;
 }
 
+#endif // #ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
 void gtest_memleak_detector::MemoryLeakDetector::End(
 	std::function<std::string()> descriptor, bool passed)
 {
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
     state.post_alloc_no = alloc_no;
 
     // Stack trace allocations do not matter since memory leak allocation is that exact allocation request
@@ -480,6 +522,10 @@ void gtest_memleak_detector::MemoryLeakDetector::End(
     {
         db_.insert_or_assign(description, stored_alloc_no);
     }
+#else
+    UNREFERENCED_PARAMETER(descriptor);
+    UNREFERENCED_PARAMETER(passed);
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 }
 
-#endif // GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE
+//#endif // GTEST_MEMLEAK_DETECTOR_CRTDBG_AVAILABLE

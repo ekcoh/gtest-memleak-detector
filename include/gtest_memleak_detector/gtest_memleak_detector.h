@@ -18,9 +18,22 @@
 #include <gtest/gtest.h> // Google Test
 #include <memory>        // std::unique_ptr
 
+// Memory debugging tools (MSVC only)
+#if defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
+#define GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+#define GTEST_MEMLEAK_DETECTOR_CRTDBG_AVAILABLE
+#endif // defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
+
 #define GTEST_MEMLEAK_DETECTOR_APPEND_LISTENER \
   ::testing::UnitTest::GetInstance()->listeners().Append( \
     new gtest_memleak_detector::MemoryLeakDetectorListener(argc, argv)) 
+
+#ifndef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+#pragma message ( \
+	"WARNING: Memory leak detection not supported by this compiler/configuration/" \
+	"platform combination. All memory leak assertions will be disabled. " \
+	"This is expected for non-debug builds, e.g. release build.")
+#endif
 
 #define GTEST_MEMLEAK_DETECTOR_MAIN \
 int main(int argc, char **argv) \
@@ -71,15 +84,16 @@ public:
 	void OnTestProgramEnd(
 		const ::testing::UnitTest& unit_test) override;
 
+    // Mainly exposed for verification convenience purposes (stateless)
 	static std::string MakeDatabaseFilePath(const char* binary_file_path);
 
 private:
-    static std::string DescribeTest(const ::testing::TestInfo& test_info);
+    //static std::string DescribeTest(const ::testing::TestInfo& test_info);
     
-    static void FailCurrentTest(long leak_alloc_no, 
-		const char* leak_file, 
-		unsigned long leak_line, 
-		const char* leak_trace);
+  //  static void FailCurrentTest(long leak_alloc_no, 
+		//const char* leak_file, 
+		//unsigned long leak_line, 
+		//const char* leak_trace);
 
 	std::unique_ptr<MemoryLeakDetector> impl_;
 };

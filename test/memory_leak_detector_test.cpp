@@ -108,6 +108,8 @@ TEST_F(memory_leak_detector_test,
     EXPECT_EQ(fail_count, 0u);
 }
 
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
 TEST_F(memory_leak_detector_test,
     end__should_report_failure__if_leaking_and_test_has_no_assertion_failures)
 {
@@ -128,6 +130,8 @@ TEST_F(memory_leak_detector_test,
     EXPECT_STREQ(trace.c_str(), "");    // first run, no trace info
 }
 
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
 unsigned long leaking_test_case_line = 0;
 unsigned long test_line = 0;
 
@@ -142,6 +146,8 @@ inline std::string make_trace_line(const std::string& file, unsigned long line, 
 {
     return "- " + file + " (" + std::to_string(line) + "): " + function + "\n";
 }
+
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 
 TEST_F(memory_leak_detector_test,
     end__should_report_trace__if_leaking_and_test_has_no_assertion_failures_and_database_have_already_been_populated)
@@ -172,6 +178,8 @@ TEST_F(memory_leak_detector_test,
     EXPECT_STREQ(file.c_str(), this_file.c_str());          // first run, no trace info
     EXPECT_STREQ(trace.c_str(), expected_trace.c_str());    // first run, no trace info
 }
+
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 
 #define GTEST_MEMLEAK_DETECTOR_LEAK_MSG_PART \
     "Memory leak detected."

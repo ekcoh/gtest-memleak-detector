@@ -7,11 +7,6 @@
 
 #include <gtest_memleak_detector/gtest_memleak_detector.h>
 
-// Memory debugging tools (MSVC only)
-#if defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
-#define GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
-#define GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE
-
 #pragma warning( push )
 // warning C5039: potentially throwing function passed to extern C function 
 // under -EHc. May result in undefined behavior.
@@ -159,21 +154,5 @@ private:
 };
 
 } // namespace gtest_memleak_detector
-
-#else
-
-#ifdef _MSC_VER
-#pragma message ( \
-	"WARNING: Memory leak detection not supported by this compiler/configuration/" \
-	"platform combination. All memory leak assertions will be disabled. " \
-	"This is expected for non-debug builds, e.g. release build.")
-#endif // _MSC_VER
-
-namespace gtest_memleak_detector
-{
-	class MemoryLeakDetectorListener::Impl { };
-} // namespace gtest_memleak_detector
-
-#endif // defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
 
 #endif // GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_H

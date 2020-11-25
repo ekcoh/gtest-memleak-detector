@@ -50,39 +50,37 @@ TEST_F(memory_leak_detector_listener_test,
 
 // Leaking test cases
 
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
 TEST_F(memory_leak_detector_listener_test,
     leak_should_be_detected__if_not_freeing_previously_allocated_memory_before_test_end_with_new_delete)
 {
-#ifndef NDEBUG // Only possible to test in debug build
     GivenPreTestSequence();
     auto* ptr = new int;
     GivenPostTestSequence(expected_outcome::mem_leak_failure);
     delete ptr; // clean-up
-#endif
 }
 
 TEST_F(memory_leak_detector_listener_test,
     leak_should_be_detected__if_not_freeing_previously_allocated_memory_before_test_end_with_malloc_free)
 {
-#ifndef NDEBUG // Only possible to test in debug build
     GivenPreTestSequence();
     auto* ptr = malloc(32);
     GivenPostTestSequence(expected_outcome::mem_leak_failure);
     free(ptr); // clean-up
-#endif
 }
 
 TEST_F(memory_leak_detector_listener_test,
     leak_should_not_be_detected__if_not_freeing_previously_allocated_memory_before_test_end_with_heap_alloc_free)
 {
     // Note that HeapAlloc is not subject for CRTDBG
-#ifndef NDEBUG // Only possible to test in debug build
     GivenPreTestSequence();
     auto* ptr = HeapAlloc(GetProcessHeap(), 0, 32);
     GivenPostTestSequence(expected_outcome::no_mem_leak);
     HeapFree(GetProcessHeap(), 0, ptr); // clean-up
-#endif
 }
+
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 
 
 

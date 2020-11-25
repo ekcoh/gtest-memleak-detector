@@ -4,7 +4,7 @@
 
 #include "memory_leak_detector.h"
 
-#ifdef GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 
 gtest_memleak_detector::StackTrace::StackTrace(
     Buffer* buffer, Location* location, const char* hook_file)
@@ -134,4 +134,4 @@ void gtest_memleak_detector::StackTrace::OnCallstackEntry(CallstackEntryType eTy
     }
 }
 
-#endif // GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE

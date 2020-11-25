@@ -2,7 +2,7 @@
 // This file is subject to the license terms in the LICENSE file 
 // found in the root directory of this distribution.
 
-// Memory debugging tools (MSVC only)
+// Memory debugging tools (MSVC only in debug mode)
 #if defined(_DEBUG) && defined(_MSC_VER)
 
 // CRT debug tools
