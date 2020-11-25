@@ -9,7 +9,10 @@ Currently only works with MSVC tool-chain using
 - Automatic memory leak detection in test cases for code exercised within test case function.
 - Memory leak reporting as Google Test failures so that tests fail if a leak is detected.
 - Memory leak suppression so that memory leaks are not reported if the test fail due to failed assertion.
-- Rerunning a failed test for a debug build with debugger attached will break at the allocation statement causing the leak.
+- Rerunning a failed test will provide stack-trace for the origin of the allocation causing the leak.
+- Coexistence support for other CRTDBG allocation hooks and reporting hooks to be installed at the same time.
+- Support for leak detection via malloc, realloc, new (Same as CRTDBG supports).
+- If the code exercised by a test case has multiple leaks, only the first leak is reported.
 
 ## Requirements
 The project depends on the open source [Google Test](https://github.com/google/googletest) project. 
@@ -61,6 +64,7 @@ A complete example of the basic setup can be found in
 - It would make sense to make memory leak suppression in case of failed assertions optional,
   but at the time being it is mandatory since GTest allocates memory during assertion failures.
 - Only ANSI filenames are currently supported. This means that proper UNICODE support is currently missing.
+- Leaks caused by alternative memory allocation functions, e.g. HeapAlloc in WINAPI, will not be reported since this is not supported by CRTDBG.
 
 ## License
 
@@ -68,3 +72,9 @@ This project is released under the MIT license,
 see [License](https://github.com/ekcoh/gtest-memleak-detector/blob/master/LICENSE).
 This basically means you can do whatever you want with this project as long as you provide 
 the original license and copyright information with your own project distribution.
+
+## Third Party Licenses
+
+Third party dependencies (not distributed, but may indirectly be downloaded via CMake) are licensed under the following licenses:
+- [Google Test](https://github.com/google/googletest): [BSD-3-Clause License](https://github.com/google/googletest/blob/master/LICENSE)
+- [StackWalker](https://github.com/JochenKalmbach/StackWalker): [BSD-2-Clause License](https://github.com/JochenKalmbach/StackWalker/blob/master/LICENSE)
