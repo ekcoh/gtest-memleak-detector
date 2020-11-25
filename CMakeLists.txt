@@ -22,40 +22,44 @@ option(${PROJECT_NAME_UCASE}_BUILD_TESTS
 	"If enabled, compile the tests." ON)
 option(${PROJECT_NAME_UCASE}_BUILD_EXAMPLES 
 	"If enabled, compile the examples." ON)
+option(${PROJECT_NAME_UCASE}_DOWNLOAD_DEPENDENCIES 
+	"If enabled, download dependencies." ON)
 
-###################################################################################################
-# Download and unpack StackWalker at configure time if not already available.
-# If made available by parent project use that version and configuration instead.
-FetchContent_Declare(
-  stackwalker
-  GIT_REPOSITORY https://github.com/JochenKalmbach/StackWalker.git
-  GIT_TAG        1.20
-)
-FetchContent_GetProperties(stackwalker)
-if(NOT stackwalker_POPULATED)
-  FetchContent_Populate(stackwalker)
-  set(StackWalker_DISABLE_TESTS ON CACHE BOOL "" FORCE)
-  add_subdirectory(${stackwalker_SOURCE_DIR} ${stackwalker_BINARY_DIR})
-endif()
+if (${PROJECT_NAME_UCASE}_DOWNLOAD_DEPENDENCIES)
+    ###############################################################################################
+    # Download and unpack StackWalker at configure time if not already available.
+    # If made available by parent project use that version and configuration instead.
+    FetchContent_Declare(
+      stackwalker
+      GIT_REPOSITORY https://github.com/JochenKalmbach/StackWalker.git
+      GIT_TAG        1.20
+    )
+    FetchContent_GetProperties(stackwalker)
+    if(NOT stackwalker_POPULATED)
+      FetchContent_Populate(stackwalker)
+      set(StackWalker_DISABLE_TESTS ON CACHE BOOL "" FORCE)
+      add_subdirectory(${stackwalker_SOURCE_DIR} ${stackwalker_BINARY_DIR})
+    endif()
 
-###################################################################################################
-# Download and unpack Google Test at configure time if not already available.
-# If made available by parent project use that version and configuration instead.
-# Currently using release 1.10.0 (October 2019)
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        release-1.10.0
-)
-FetchContent_GetProperties(googletest)
-if(NOT googletest_POPULATED)
-  FetchContent_Populate(googletest)
-  if (WIN32)
-    # Prevent overriding the parent project's compiler/linker
-    # settings on Windows
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  endif()
-  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+    ###############################################################################################
+    # Download and unpack Google Test at configure time if not already available.
+    # If made available by parent project use that version and configuration instead.
+    # Currently using release 1.10.0 (October 2019)
+    FetchContent_Declare(
+      googletest
+      GIT_REPOSITORY https://github.com/google/googletest.git
+      GIT_TAG        release-1.10.0
+    )
+    FetchContent_GetProperties(googletest)
+    if(NOT googletest_POPULATED)
+      FetchContent_Populate(googletest)
+      if (WIN32)
+        # Prevent overriding the parent project's compiler/linker
+        # settings on Windows
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+      endif()
+      add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+    endif()
 endif()
 
 ###################################################################################################

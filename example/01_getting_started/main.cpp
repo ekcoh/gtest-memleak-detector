@@ -56,7 +56,7 @@ TEST(example_01_memory_leak_detection,
     // ptr_1 and ptr_2 are never deallocated and will leak
     // (multiple - only first one reported)
     auto ptr_1 = new int(5);
-    auto ptr_2 = new int(7); // will not be reported
+    auto ptr_2 = new int(7); // will not be reported, only first
     EXPECT_EQ(*ptr_1, 5);
     EXPECT_EQ(*ptr_2, 7);
 }
@@ -99,40 +99,13 @@ TEST(example_01_memory_leak_detection,
 	EXPECT_EQ(*ptr, 5);
 }
 
-//TEST(example_01_memory_leak_detection,
-//    forgetting_to_cleanup_multiple_allocations_with_malloc_will_leak_memory)
-//{
-//    // ptr is never freed and will leak
-//    // (memory leak reported)
-//    auto p1 = static_cast<int*>(malloc(sizeof(int)));
-//    *p1 = 5;
-//    auto p2 = static_cast<int*>(malloc(sizeof(int)));
-//    *p2 = 7;
-//    EXPECT_EQ(*p1, 5);
-//    EXPECT_EQ(*p2, 7);
-//}
-
-//TEST(example_01_memory_leak_detection,
-//    forgetting_to_cleanup_allocation_with_realloc_will_leak_memory)
-//{
-//    // ptr is never freed and will leak
-//    // (memory leak reported)
-//    auto ptr = static_cast<int*>(malloc(sizeof(int)));
-//    *ptr = 5;
-//    ptr = static_cast<int*>(realloc(ptr, 32));
-//    EXPECT_EQ(*ptr, 5);
-//}
-
-#ifdef _WIN32
-
 TEST(example_01_memory_leak_detection,
-    forgetting_to_cleanup_allocation_with_heap_alloc_will_leak_memory)
+    forgetting_to_cleanup_allocation_with_realloc_will_leak_memory)
 {
     // ptr is never freed and will leak
     // (memory leak reported)
-    auto ptr = static_cast<int*>(HeapAlloc(GetProcessHeap(), 0, 3200));
+    auto ptr = static_cast<int*>(malloc(sizeof(int)));
     *ptr = 5;
+    ptr = static_cast<int*>(realloc(ptr, 32));
     EXPECT_EQ(*ptr, 5);
 }
-
-#endif

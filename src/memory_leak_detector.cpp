@@ -257,6 +257,7 @@ extern "C" int AllocHook(
     switch (nAllocType)
     {
     case _HOOK_ALLOC:
+    case _HOOK_REALLOC:
         if (state.discard)
             break;
         alloc_no = lRequest;
@@ -271,13 +272,7 @@ extern "C" int AllocHook(
             state.discard = false;
         }
         break;
-    case _HOOK_REALLOC: // TODO Design realloc test
-        char buf[256];
-        sprintf_s(buf, "FREE request_=%ld\n", lRequest);
-        OutputDebugStringA(buf);
-        break;
-    case _HOOK_FREE:
-        break;
+    case _HOOK_FREE: // fall-through
     default:
         break;
     }
@@ -398,12 +393,14 @@ extern "C" int report_callback(int reportType, char* message, int* returnValue)
     {
         // IMPORTANT: Remember that this function must have noexcept/nothrow semantics
         //            since indirectly called by C-run-time.
-        if (parsed_alloc_no == no_break_alloc)
+        long parsed_value;
+        if (try_parse_alloc_no(parsed_value, message))
         {
-            // if not previously parsed on earlier invocation
-            if (parsed_alloc_no == no_break_alloc && message)
-                try_parse_alloc_no(parsed_alloc_no, message); // TODO can be void
-            fprintf(stderr, message); // avoid std::cerr since CRT callback
+            if (parsed_value < parsed_alloc_no ||  // if leak happening earlier in flow
+                parsed_alloc_no == no_break_alloc) // if leak not yet parsed
+            {
+                parsed_alloc_no = parsed_value;
+            }
         }
     }
     
