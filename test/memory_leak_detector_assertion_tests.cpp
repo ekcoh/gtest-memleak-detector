@@ -18,6 +18,9 @@
 #pragma warning( disable : 5039 ) 
 #include <Windows.h>
 #pragma warning( pop )
+
+// No leak test cases
+
 TEST_F(memory_leak_detector_test, 
     no_leak_should_be_detected__if_freeing_previously_allocated_memory_before_test_end_with_new_delete)
 {
@@ -44,6 +47,8 @@ TEST_F(memory_leak_detector_test,
     HeapFree(GetProcessHeap(), 0, ptr);
     GivenPostTestSequence(expected_outcome::no_mem_leak);
 }
+
+// Leaking test cases
 
 TEST_F(memory_leak_detector_test,
     leak_should_be_detected__if_not_freeing_previously_allocated_memory_before_test_end_with_new_delete)
@@ -77,6 +82,32 @@ TEST_F(memory_leak_detector_test,
     HeapFree(GetProcessHeap(), 0, ptr); // clean-up
 #endif
 }
+
+// TODO CANNOT BE TESTED THIS WAY, NEED TO DO SOMETHING MORE DETAILED
+//TEST_F(memory_leak_detector_test,
+//    leak_should_be_reported__if_not_freeing_previously_allocated_memory_before_test_end_with_malloc_free__and_test_is_reexecuted)
+//{
+//    auto expected_message = gtest_memleak_detector::MemoryLeakDetectorListener::MakeFailureMessage(
+//        1234, __FILE__, 4567, ""
+//    );
+//
+//#ifndef NDEBUG // Only possible to test in debug build
+//    {   // Collect data
+//        GivenPreTestSequence();
+//        auto* ptr = malloc(32);
+//        GivenPostTestSequence(expected_outcome::mem_leak_failure);
+//        free(ptr); // clean-up
+//    }
+//    
+//    {   // Report leak
+//        GivenPreTestSequence();
+//        auto* ptr = malloc(32);
+//        GivenPostTestSequence(expected_outcome::mem_leak_failure, 
+//            expected_message.c_str());
+//        free(ptr); // clean-up
+//    }
+//#endif
+//}
 
 
 

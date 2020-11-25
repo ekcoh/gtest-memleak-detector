@@ -2,6 +2,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the root directory of this distribution.
 
+#include <fstream>
 #include "memory_leak_detector_test.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -22,8 +23,17 @@ memory_leak_detector_test::memory_leak_detector_test()
     : detector(1, argv)
 { }
 
+void memory_leak_detector_test::SetUp()
+{   
+    // Ensure database do not exist
+    std::ifstream f;
+    f.open(MemoryLeakDetectorListener::MakeDatabaseFilePath(test_binary_path).c_str());
+    ASSERT_FALSE(f) << "Test assumption failed: No pre-existing database exists";
+}
+
 void memory_leak_detector_test::TearDown()
 {
+    // Remove database in-between each test
     std::remove(MemoryLeakDetectorListener::MakeDatabaseFilePath(test_binary_path).c_str());
 }
 

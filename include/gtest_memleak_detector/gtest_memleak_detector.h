@@ -47,10 +47,12 @@ namespace gtest_memleak_detector {
 // MemoryLeakDetectorListener
 ///////////////////////////////////////////////////////////////////////////////
 
+class MemoryLeakDetector;
+
 class MemoryLeakDetectorListener : public ::testing::EmptyTestEventListener {
 public:
 	MemoryLeakDetectorListener(int argc = 0, char** argv = nullptr);
-	virtual ~MemoryLeakDetectorListener();
+	virtual ~MemoryLeakDetectorListener() noexcept;
 
 	MemoryLeakDetectorListener(const MemoryLeakDetectorListener&) = delete;
 	MemoryLeakDetectorListener(MemoryLeakDetectorListener&&) = delete;
@@ -70,12 +72,7 @@ public:
 		const ::testing::UnitTest& unit_test) override;
 
 	static std::string MakeDatabaseFilePath(const char* binary_file_path);
-	static std::string MakeFailureMessage(long leak_alloc_no,
-		const char* leak_file, 
-		unsigned long leak_line, 
-		const char* leak_trace);
 
-	static const char* database_file_suffix; // TODO Consider removing!?
 private:
     static std::string DescribeTest(const ::testing::TestInfo& test_info);
     
@@ -84,9 +81,7 @@ private:
 		unsigned long leak_line, 
 		const char* leak_trace);
 
-	class Impl;
-	friend class Impl;
-	std::unique_ptr<Impl> impl_; 
+	std::unique_ptr<MemoryLeakDetector> impl_;
 };
 
 } // namespace gtest_memleak_detector

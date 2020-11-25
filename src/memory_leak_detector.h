@@ -98,24 +98,38 @@ private:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// MemoryLeakDetectorListener::Impl
+// MemoryLeakDetector
 ///////////////////////////////////////////////////////////////////////////////
 
-class MemoryLeakDetectorListener::Impl
+class MemoryLeakDetector
 {
 public:
-	Impl(int argc, char** argv0);
-	~Impl() noexcept = default;
+    using FailureCallback = std::function<void(
+        long leak_alloc_no,
+        const char* leak_file,
+        unsigned long leak_line,
+        const char* leak_trace)>;
 
-    const Impl(const Impl&) = delete;
-    const Impl(Impl&&) noexcept = delete;
-    Impl& operator=(const Impl&) = delete;
-    Impl& operator=(Impl&&) = delete;
+	explicit MemoryLeakDetector(int argc, char** argv0);
+	~MemoryLeakDetector() noexcept = default;
+
+    const MemoryLeakDetector(const MemoryLeakDetector&) = delete;
+    const MemoryLeakDetector(MemoryLeakDetector&&) noexcept = delete;
+    MemoryLeakDetector& operator=(const MemoryLeakDetector&) = delete;
+    MemoryLeakDetector& operator=(MemoryLeakDetector&&) = delete;
 
 	void Start(std::function<std::string()> descriptor);
 	void End(std::function<std::string()> descriptor, bool passed);
 
-    //void SetFailureCallback(std::function<void(const char*)> callback);
+    void SetFailureCallback(FailureCallback callback);
+
+    static std::string MakeDatabaseFilePath(const char* binary_file_path);
+    static std::string MakeFailureMessage(long leak_alloc_no,
+        const char* leak_file,
+        unsigned long leak_line,
+        const char* leak_trace);
+
+    static const char* database_file_suffix; // TODO Consider removing!?
 
     void WriteDatabase();
 private:
@@ -141,7 +155,7 @@ private:
     std::string     file_path;
     std::unordered_map<std::string, long> db_;
     std::vector<std::string> rerun_filter_;
-    //std::function<void(const char* message)> fail_;
+    FailureCallback fail_;
 };
 
 } // namespace gtest_memleak_detector

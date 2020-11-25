@@ -70,6 +70,25 @@ TEST(example_01_memory_leak_detection,
 	EXPECT_EQ(*ptr, 5);
 }
 
+int* inner()
+{
+    return new int(5);
+}
+
+int* call()
+{
+    return inner();
+}
+
+TEST(example_01_memory_leak_detection,
+    forgetting_to_cleanup_allocation_further_down_the_stack_with_new_will_leak_memory)
+{
+    // ptr is never deallocated and will leak
+    // (memory leak reported)
+    auto ptr = call();
+    EXPECT_EQ(*ptr, 5);
+}
+
 TEST(example_01_memory_leak_detection,
 	forgetting_to_cleanup_allocation_with_malloc_will_leak_memory)
 {
@@ -80,29 +99,29 @@ TEST(example_01_memory_leak_detection,
 	EXPECT_EQ(*ptr, 5);
 }
 
-TEST(example_01_memory_leak_detection,
-    forgetting_to_cleanup_multiple_allocations_with_malloc_will_leak_memory)
-{
-    // ptr is never freed and will leak
-    // (memory leak reported)
-    auto p1 = static_cast<int*>(malloc(sizeof(int)));
-    *p1 = 5;
-    auto p2 = static_cast<int*>(malloc(sizeof(int)));
-    *p2 = 7;
-    EXPECT_EQ(*p1, 5);
-    EXPECT_EQ(*p2, 7);
-}
+//TEST(example_01_memory_leak_detection,
+//    forgetting_to_cleanup_multiple_allocations_with_malloc_will_leak_memory)
+//{
+//    // ptr is never freed and will leak
+//    // (memory leak reported)
+//    auto p1 = static_cast<int*>(malloc(sizeof(int)));
+//    *p1 = 5;
+//    auto p2 = static_cast<int*>(malloc(sizeof(int)));
+//    *p2 = 7;
+//    EXPECT_EQ(*p1, 5);
+//    EXPECT_EQ(*p2, 7);
+//}
 
-TEST(example_01_memory_leak_detection,
-    forgetting_to_cleanup_allocation_with_realloc_will_leak_memory)
-{
-    // ptr is never freed and will leak
-    // (memory leak reported)
-    auto ptr = static_cast<int*>(malloc(sizeof(int)));
-    *ptr = 5;
-    ptr = static_cast<int*>(realloc(ptr, 32));
-    EXPECT_EQ(*ptr, 5);
-}
+//TEST(example_01_memory_leak_detection,
+//    forgetting_to_cleanup_allocation_with_realloc_will_leak_memory)
+//{
+//    // ptr is never freed and will leak
+//    // (memory leak reported)
+//    auto ptr = static_cast<int*>(malloc(sizeof(int)));
+//    *ptr = 5;
+//    ptr = static_cast<int*>(realloc(ptr, 32));
+//    EXPECT_EQ(*ptr, 5);
+//}
 
 #ifdef _WIN32
 

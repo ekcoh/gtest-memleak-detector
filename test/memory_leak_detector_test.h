@@ -26,6 +26,7 @@ public:
     memory_leak_detector_test(memory_leak_detector_test&&) = delete;
     memory_leak_detector_test& operator=(memory_leak_detector_test&&) = delete;
 
+    void SetUp() override;
     void TearDown() override;
 
     void GivenPreTestSequence();

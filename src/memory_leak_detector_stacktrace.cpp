@@ -2,7 +2,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the root directory of this distribution.
 
-#include "memory_leak_detector_listener_impl.h"
+#include "memory_leak_detector.h"
 
 #ifdef GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_IMPL_AVAILABLE
 

@@ -16,11 +16,17 @@ add_executable(${PROJECT_NAME}_unit_tests
 	memory_leak_detector_test.cpp
 	memory_leak_detector_assertion_tests.cpp
     memory_leak_detector_helper_tests.cpp
+    memory_leak_detector_impl_test.cpp
 )
 gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME}_unit_tests)
 target_link_libraries(${PROJECT_NAME}_unit_tests
 	PRIVATE ${PROJECT_NAME}
+    PRIVATE StackWalker
 	PUBLIC gtest
+)
+target_include_directories(${PROJECT_NAME}_unit_tests
+    PRIVATE "../src"
+    PRIVATE ${stackwalker_SOURCE_DIR}/Main # Incorrectly setup by StackWalker CMake
 )
 add_test(NAME ${PROJECT_NAME}_unit_tests COMMAND ${PROJECT_NAME}_unit_tests )
 #gtest_discover_tests(${PROJECT_NAME}_unit_tests)

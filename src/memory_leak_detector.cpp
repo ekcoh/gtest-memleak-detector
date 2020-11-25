@@ -2,12 +2,14 @@
 // This file is subject to the license terms in the LICENSE file 
 // found in the root directory of this distribution.
 
-#include "memory_leak_detector_listener_impl.h"
+#include "memory_leak_detector.h"
 
 #ifdef GTEST_MEMLEAK_DETECTOR_MEMORY_LISTENER_CRTDBG_AVAILABLE
 
 #include <string>   // std::string
 #include <exception>
+
+#define GTEST_MEMLEAK_DETECTOR_DEBUG_INTERNALS
 
 ///////////////////////////////////////////////////////////////////////////////
 // test_case_data
@@ -70,7 +72,10 @@ static long           alloc_no = 0;
 // gtest_memleak_detector definitions
 ///////////////////////////////////////////////////////////////////////////////
 
-bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::TryParseAllocNo(
+const char* gtest_memleak_detector::MemoryLeakDetector::database_file_suffix
+    = "gt.memleaks";
+
+bool gtest_memleak_detector::MemoryLeakDetector::TryParseAllocNo(
     long& dst, const char* str) noexcept
 {   // IMPORTANT: This function must have noexcept/nothrow semantics
     //            since indirectly called by C-run-time.
@@ -102,11 +107,12 @@ bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::TryParseAllocNo(
     return true; // success
 }
 
-gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Impl(
+gtest_memleak_detector::MemoryLeakDetector::MemoryLeakDetector(
     int argc, char** argv) 
     : pre_state_{ 0 }
     , stored_debug_flags_(0)
     , alloc_hook_set_(false)
+    , fail_(nullptr)
 {
     // Require binary path as first argument
     if (argc == 0)
@@ -129,7 +135,51 @@ gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Impl(
         _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); 
 }
 
-bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::ReadDatabase()
+void gtest_memleak_detector::MemoryLeakDetector::SetFailureCallback(FailureCallback cb)
+{
+    fail_ = cb;
+}
+
+std::string gtest_memleak_detector::MemoryLeakDetector::MakeFailureMessage(
+    long leak_alloc_no,
+    const char* leak_file,
+    unsigned long leak_line,
+    const char* leak_trace)
+{
+    std::stringstream ss;
+    ss << "Memory leak detected.";
+    if (leak_alloc_no >= 0)
+        ss << "\n- Allocation request no: " << leak_alloc_no;
+    if (leak_file != nullptr && leak_file[0] != 0)
+    {
+        ss << "\n- Origin: " << leak_file;
+        if (leak_line != static_cast<unsigned long>(-1))
+            ss << ": " << leak_line;
+    }
+    if (leak_trace && leak_trace[0] != 0)
+    {
+        ss << "\n\nStacktrace:\n" << leak_trace;
+    }
+    else
+    {
+        ss << "\n\n(Re-run the test again to obtain stack-trace for the "
+            "allocation causing the memory-leak.)";
+    }
+    return ss.str();
+}
+
+std::string gtest_memleak_detector::MemoryLeakDetector::MakeDatabaseFilePath(
+    const char* binary_file_path)
+{
+    if (!binary_file_path)
+        throw std::exception();
+    std::string path = binary_file_path;
+    path += '.';
+    path += database_file_suffix;
+    return path;
+}
+
+bool gtest_memleak_detector::MemoryLeakDetector::ReadDatabase()
 {
     // Open file
     std::ifstream in;
@@ -167,7 +217,7 @@ bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::ReadDatabase()
     return true; // success
 }
 
-bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::TryReadDatabase()
+bool gtest_memleak_detector::MemoryLeakDetector::TryReadDatabase()
 {
     try
     {
@@ -185,7 +235,7 @@ bool gtest_memleak_detector::MemoryLeakDetectorListener::Impl::TryReadDatabase()
     return true; // successfully parsed all data
 }
 
-void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::WriteDatabase()
+void gtest_memleak_detector::MemoryLeakDetector::WriteDatabase()
 {
     std::ofstream out;
     out.open(file_path);
@@ -241,14 +291,14 @@ extern "C" int AllocHook(
     return result;
 }
 
-void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::SetAllocHook()
+void gtest_memleak_detector::MemoryLeakDetector::SetAllocHook()
 {
     assert(alloc_hook_set_ == false);
     stored_alloc_hook = _CrtSetAllocHook(AllocHook);
     alloc_hook_set_ = true;
 }
 
-void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::RevertAllocHook()
+void gtest_memleak_detector::MemoryLeakDetector::RevertAllocHook()
 {
     assert(alloc_hook_set_ == true);
     // "warning C5039: '_CrtSetAllocHook', false positive
@@ -261,7 +311,7 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::RevertAllocHook()
     alloc_hook_set_ = false;
 }
 
-void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Start(
+void gtest_memleak_detector::MemoryLeakDetector::Start(
     std::function<std::string()> descriptor)
 {
     state = test_case_data();
@@ -272,8 +322,9 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Start(
     // as well since it will offset recorded allocation request indices.
     SetAllocHook();
 
-    // Create a memory checkpoint to diff with later to find leaks
-    _CrtMemCheckpoint(&pre_state_);
+    //// Create a memory checkpoint to diff with later to find leaks
+    //// NOTE: Allocations below will be excluded
+    //_CrtMemCheckpoint(&pre_state_);
 
     // Find leaking allocation from database built during previous test run
     // Note that this search indirectly allocates which makes it possible to
@@ -299,6 +350,10 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::Start(
         state.break_alloc += alloc_no; 
 
     printf("PRE ALLOC NO: %ld\n", state.pre_alloc_no);
+
+    // Create a memory checkpoint to diff with later to find leaks
+    // NOTE: Allocations below will be excluded
+    _CrtMemCheckpoint(&pre_state_);
 }
 
 bool try_parse_alloc_no(long& dst, const char* str) noexcept
@@ -357,7 +412,7 @@ extern "C" int report_callback(int reportType, char* message, int* returnValue)
     return TRUE;
 }
 
-void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::End(
+void gtest_memleak_detector::MemoryLeakDetector::End(
 	std::function<std::string()> descriptor, bool passed)
 {
     state.post_alloc_no = alloc_no;
@@ -421,7 +476,8 @@ void gtest_memleak_detector::MemoryLeakDetectorListener::Impl::End(
         //auto description = DescribeTest(test_info);
         db_.insert_or_assign(description, stored_alloc_no);
         rerun_filter_.emplace_back(description);
-        FailCurrentTest(leak_alloc_no, location.file, location.line, buffer.data);
+        if (fail_)
+            fail_(leak_alloc_no, location.file, location.line, buffer.data);
     }
     else
     {
