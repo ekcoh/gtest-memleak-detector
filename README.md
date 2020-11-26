@@ -22,8 +22,9 @@ The project depends on the open source [Google Test](https://github.com/google/g
 Dependencies are managed via CMake FetchContent (requires CMake 3.11+) which means that if a 
 parent project already includes it that version will be used instead of predefined versions. 
 By default, this project will fetch dependencies automatically from GitHub if 
-GTEST_MEMLEAK_DETECTOR_DOWNLOAD_DEPENDENCIES is ON (default). If GTEST_MEMLEAK_DETECTOR_DOWNLOAD_DEPENDENCIES
-is OFF, you have to manually make Google Test and StackWalker available.
+`GTEST_MEMLEAK_DETECTOR_DOWNLOAD_DEPENDENCIES` is `ON` (default). 
+If `GTEST_MEMLEAK_DETECTOR_DOWNLOAD_DEPENDENCIES` is `OFF`, you have to manually make 
+Google Test and StackWalker available to the build.
 
 ## Getting started
 To start using the memory leak detector, simply add the project as a sub-directory 
