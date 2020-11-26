@@ -2,13 +2,15 @@
 
 # gtest-memleak-detector
 Google Test memory leak detection integration for C++11 projects and above.
-Currently only works with MSVC tool-chain using 
+Currently only works with MSVC tool-chain using
 [Microsoft CRT debug tools](https://docs.microsoft.com/en-us/visualstudio/debugger/crt-debugging-techniques?view=vs-2019).
+Provides stack-traces for memory leak origins that are hyperlinked when using Google Test Adapter in Visual Studio.
 
 ## Features
 - Automatic memory leak detection in test cases for code exercised within test case function.
 - Memory leak reporting as Google Test failures so that tests fail if a leak is detected.
 - Automatic memory leak report suppression so that memory leaks are not reported if the test fail due to a more severe failed assertion.
+- All memory leak failures contain allocation request number obtained from allocation hook.
 - Rerunning a failed test will provide a filtered stack-trace for the origin of the allocation causing the leak.
 - Coexistence support for other CRTDBG allocation hooks and reporting hooks to be installed at the same time.
 - Support for leak detection via malloc, realloc, new (Same as CRTDBG supports).
@@ -63,6 +65,12 @@ GTEST_MEMLEAK_DETECTOR_MAIN
 A complete example of the basic setup can be found in 
 [example/01_getting_started](example/01_getting_started).
 
+## Known Limitations
+- It would make sense to make memory leak suppression in case of failed assertions optional,
+  but at the time being it is mandatory since GTest allocates memory during assertion failures.
+- Only ANSI filenames are currently supported. This means that proper UNICODE support is currently missing.
+- Leaks caused by alternative memory allocation functions, e.g. HeapAlloc in WINAPI, will not be reported since this is not supported by CRTDBG.
+
 ## CMake Options
 
 The following CMake options are supported:
@@ -73,12 +81,6 @@ GTEST_MEMLEAK_DETECTOR_BUILD_TESTS            | ON            | If `ON`, builds 
 GTEST_MEMLEAK_DETECTOR_BUILD_EXAMPLES         | ON            | If `ON`, builds the example test binaries.
 GTEST_MEMLEAK_DETECTOR_ADD_EXAMPLE_TESTS      | OFF           | If `ON`, includes example tests (some intentionally failing) as part of the CTest test suite. 
 GTEST_MEMLEAK_DETECTOR_DOWNLOAD_DEPENDENCIES  | ON            | If `ON`, automatically fetches online third-party dependencies.
-
-## Known Limitations
-- It would make sense to make memory leak suppression in case of failed assertions optional,
-  but at the time being it is mandatory since GTest allocates memory during assertion failures.
-- Only ANSI filenames are currently supported. This means that proper UNICODE support is currently missing.
-- Leaks caused by alternative memory allocation functions, e.g. HeapAlloc in WINAPI, will not be reported since this is not supported by CRTDBG.
 
 ## License
 
