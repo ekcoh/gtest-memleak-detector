@@ -87,7 +87,10 @@ void gtest_memleak_detector::StackTrace::OnDbgHelpErr(LPCSTR szFuncName, DWORD g
     UNREFERENCED_PARAMETER(addr);
 }
 
+#pragma warning(push)
+#pragma warning(disable: 26812) // warning C26812: unscoped enum
 void gtest_memleak_detector::StackTrace::OnCallstackEntry(CallstackEntryType eType, CallstackEntry& entry)
+#pragma warning(pop)
 {
     if (eType == lastEntry || entry.offset == 0)
         return;
@@ -104,13 +107,10 @@ void gtest_memleak_detector::StackTrace::OnCallstackEntry(CallstackEntryType eTy
     case State::Active:
         if (entry.undName[0] != 0)
         {
-            // Abort if filtered stack trace
-//#ifndef GTEST_MEMLEAK_DETECTOR_DISABLE_FILTER_STACKTRACE
             if (Filter(entry))
                 return;
-            //#endif // GTEST_MEMLEAK_DETECTOR_DISABLE_FILTER_STACKTRACE
 
-                        // Store first stack trace row as origin
+            // Store first stack trace row as origin
             if (location->line == Location::invalid_line && entry.lineFileName[0] != 0)
             {
                 strncpy_s(location->file, max_path,

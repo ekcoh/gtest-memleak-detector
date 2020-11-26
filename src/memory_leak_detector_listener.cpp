@@ -5,6 +5,13 @@
 #include <gtest_memleak_detector/gtest_memleak_detector.h>
 #include "memory_leak_detector.h"
 
+#ifndef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+#pragma message ( \
+	"WARNING: Memory leak detection not supported by this compiler/configuration/" \
+	"platform combination. All memory leak assertions will be disabled. " \
+	"This is expected for non-debug builds, e.g. release build.")
+#endif
+
 namespace {
 
 void FailCurrentTest(

@@ -27,7 +27,8 @@ target_include_directories(${PROJECT_NAME}_unit_tests
     PRIVATE "../src"
     PRIVATE ${stackwalker_SOURCE_DIR}/Main # Incorrectly setup by StackWalker CMake
 )
-gtest_discover_tests(${PROJECT_NAME}_unit_tests XML_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+gtest_discover_tests(${PROJECT_NAME}_unit_tests 
+    XML_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 #add_test(NAME ${PROJECT_NAME}_unit_tests COMMAND ${PROJECT_NAME}_unit_tests )
 #gtest_discover_tests(${PROJECT_NAME}_unit_tests)
 

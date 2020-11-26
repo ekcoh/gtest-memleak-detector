@@ -7,13 +7,22 @@
 // Basic Google Test example showcasing some test cases leaking memory. Run the tests to see that
 // the memory leaks are detected by the memory listener and reported as test failures.
 
-#include <gtest/gtest.h>
+#pragma warning( push )
+#pragma warning( disable : 26812 ) // MSVC C26812: unscoped enum
+#pragma warning( disable : 26495 ) // MSVC C26495: unitialized variable
+#include <gtest/gtest.h>           // Google Test
+#pragma warning( pop )
+
 #include <gtest_memleak_detector/gtest_memleak_detector.h>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #endif
+
+// Disable warnings (and avoid checks), for simplicity of example
+#pragma warning(disable: 6011) // warning C6011: dereferencing NULL pointer
+#pragma warning(disable: 6308) // warning C6308: realloc might return null pointer
 
 // This is typically defined in its own file, but defined here to reduce complexity of example
 int main(int argc, char **argv)

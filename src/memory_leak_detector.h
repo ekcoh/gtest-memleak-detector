@@ -127,13 +127,8 @@ public:
     static const char* database_file_suffix; // TODO Consider removing!?
 
     void WriteDatabase();
-private:
-    //static int AllocHook(int nAllocType, void* pvData,
-    //    size_t nSize, int nBlockUse, long lRequest,
-    //    const unsigned char* szFileName, int nLine) noexcept;
 
-    static bool TryParseAllocNo(long& dst, const char* str) noexcept;
-    //long ParseMemLeakAllocNo(_CrtMemState& mem_diff) const noexcept;
+private:
     
     bool ReadDatabase();
     bool TryReadDatabase();

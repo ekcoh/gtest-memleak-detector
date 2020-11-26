@@ -79,44 +79,6 @@ static long           alloc_no = 0;
 const char* gtest_memleak_detector::MemoryLeakDetector::database_file_suffix
     = "gt.memleaks";
 
-bool gtest_memleak_detector::MemoryLeakDetector::TryParseAllocNo(
-    long& dst, const char* str) noexcept
-{   
-#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
-    // IMPORTANT: This function must have noexcept/nothrow semantics
-    //            since indirectly called by C-run-time.
-    if (!str)
-        return false; // nullptr
-
-    const auto start = strchr(str, '{');
-    if (nullptr == start)
-        return false; // failed (format error)
-
-    const auto stop = strchr(start, '}');
-    if (nullptr == stop)
-        return false; // failed (format error)
-
-    const auto len = stop - start - 1;
-    if (len <= 0 || len > 10)
-    {   // alloc_no is 32-bit (long) on Windows
-        return false; // failed (range error)
-    }
-
-    // Parse allocation no as 32-bit integer.
-    char buffer[11]; // 10 + termination char
-    strncpy_s(buffer, start + 1, static_cast<size_t>(len));
-    const auto allocation_no = strtol(buffer, nullptr, 10);
-    if (allocation_no == LONG_MIN || allocation_no == LONG_MAX)
-        return false; // failed
-
-    dst = allocation_no;
-    return true; // success
-#else
-    UNREFERENCED_PARAMETER(dst);
-    UNREFERENCED_PARAMETER(str);
-    return false; // disabled
-#endif
-}
 
 gtest_memleak_detector::MemoryLeakDetector::MemoryLeakDetector(
     int argc, char** argv) 
@@ -410,7 +372,7 @@ bool try_parse_alloc_no(long& dst, const char* str) noexcept
 
     // Parse allocation no as 32-bit integer, i.e.
     // max 10 digits + termination char
-    char buffer[11];
+    char buffer[11]{ 0 };
     strncpy_s(buffer, start + 1, static_cast<size_t>(len));
     const auto allocation_no = strtol(buffer, nullptr, 10);
     if (allocation_no == LONG_MIN || allocation_no == LONG_MAX)

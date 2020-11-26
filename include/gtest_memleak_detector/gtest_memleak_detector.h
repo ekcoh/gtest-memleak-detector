@@ -15,7 +15,12 @@
 #ifndef GTEST_MEMLEAK_DETECTOR_H
 #define GTEST_MEMLEAK_DETECTOR_H
 
+#pragma warning(push)
+#pragma warning(disable: 26812)
+#pragma warning(disable: 26495) // MSVC C26495: unitialized variable
 #include <gtest/gtest.h> // Google Test
+#pragma warning(pop)
+
 #include <memory>        // std::unique_ptr
 
 // Memory debugging tools (MSVC only)
@@ -27,13 +32,6 @@
 #define GTEST_MEMLEAK_DETECTOR_APPEND_LISTENER \
   ::testing::UnitTest::GetInstance()->listeners().Append( \
     new gtest_memleak_detector::MemoryLeakDetectorListener(argc, argv)) 
-
-#ifndef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
-#pragma message ( \
-	"WARNING: Memory leak detection not supported by this compiler/configuration/" \
-	"platform combination. All memory leak assertions will be disabled. " \
-	"This is expected for non-debug builds, e.g. release build.")
-#endif
 
 #define GTEST_MEMLEAK_DETECTOR_MAIN \
 int main(int argc, char **argv) \

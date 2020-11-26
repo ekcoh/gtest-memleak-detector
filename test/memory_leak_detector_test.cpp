@@ -31,8 +31,8 @@ public:
 
     static void SetUpTestCase()
     {
-        std::transform(this_file.begin(), this_file.end(), this_file.begin(),
-            [](char c) { return static_cast<char>(std::tolower(c)); });
+        //std::transform(this_file.begin(), this_file.end(), this_file.begin(),
+        //    [](char c) { return static_cast<char>(std::tolower(c)); });
     }
 
     void SetUp() override
@@ -81,105 +81,6 @@ public:
 
     MemoryLeakDetector sut;
 };
-
-TEST_F(memory_leak_detector_test, 
-    end__should_not_report_failure__if_not_leaking_and_test_has_no_assertion_failures)
-{
-    GivenFailCallbackSet();
-
-    auto descriptor = []() { return std::string("some_test"); };
-    sut.Start(descriptor);
-    sut.End(descriptor, true); // true: passed
-    
-    EXPECT_EQ(fail_count, 0u);
-}
-
-TEST_F(memory_leak_detector_test,
-    end__should_not_report_failure__if_leaking_but_test_has_assertion_failures)
-{
-    GivenFailCallbackSet();
-
-    auto descriptor = []() { return std::string("some_test"); };
-    sut.Start(descriptor);
-    auto* ptr = malloc(64);
-    sut.End(descriptor, false); // false: not passed
-    free(ptr); // cleanup
-
-    EXPECT_EQ(fail_count, 0u);
-}
-
-#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
-
-TEST_F(memory_leak_detector_test,
-    end__should_report_failure__if_leaking_and_test_has_no_assertion_failures)
-{
-    GivenFailCallbackSet();
-
-    auto test_case = []() { return malloc(64); };
-
-    auto descriptor = []() { return std::string("some_test"); };
-    sut.Start(descriptor);
-    auto* ptr = test_case();
-    sut.End(descriptor, true);          // true: passed
-    free(ptr);                          // cleanup
-
-    ASSERT_EQ(fail_count, 1u);
-    EXPECT_GT(alloc_no, 0);             // weak
-    EXPECT_EQ(line, unsigned long(-1)); // no line
-    EXPECT_STREQ(file.c_str(), "");     // first run, no trace info
-    EXPECT_STREQ(trace.c_str(), "");    // first run, no trace info
-}
-
-#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
-
-unsigned long leaking_test_case_line = 0;
-unsigned long test_line = 0;
-
-__declspec(noinline) void* leaking_test_case(size_t size_bytes)
-{
-    leaking_test_case_line = unsigned long(__LINE__) + 1;
-    auto* ptr = malloc(size_bytes);
-    return ptr;
-}
-
-inline std::string make_trace_line(const std::string& file, unsigned long line, const std::string& function)
-{
-    return "- " + file + " (" + std::to_string(line) + "): " + function + "\n";
-}
-
-#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
-
-TEST_F(memory_leak_detector_test,
-    end__should_report_trace__if_leaking_and_test_has_no_assertion_failures_and_database_have_already_been_populated)
-{
-    GivenFailCallbackSet();
-
-    auto descriptor = []() { return std::string("some_test"); };
-    sut.Start(descriptor);
-    auto* ptr = leaking_test_case(64);
-    sut.End(descriptor, true);          // true: passed
-    free(ptr);                          // cleanup
-
-    // Rerun to obtain stack trace
-    Reset();
-    sut.Start(descriptor);
-    test_line = unsigned long(__LINE__) + 1;
-    ptr = leaking_test_case(64);
-    sut.End(descriptor, true);          // true: passed
-    free(ptr);                          // cleanup
-
-    std::string expected_trace = 
-        make_trace_line(this_file, leaking_test_case_line, "leaking_test_case") +
-        make_trace_line(this_file, test_line, __FUNCTION__);
-
-    ASSERT_EQ(fail_count, 1u);
-    EXPECT_GT(alloc_no, 0);                                 // weak
-    EXPECT_EQ(line, leaking_test_case_line);                // test case line no
-    EXPECT_STREQ(file.c_str(), this_file.c_str());          // first run, no trace info
-    EXPECT_STREQ(trace.c_str(), expected_trace.c_str());    // first run, no trace info
-}
-
-#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 
 #define GTEST_MEMLEAK_DETECTOR_LEAK_MSG_PART \
     "Memory leak detected."
@@ -257,3 +158,104 @@ TEST_F(memory_leak_detector_test,
         GTEST_MEMLEAK_DETECTOR_LEAK_MSG_PART
         GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART);
 }
+
+TEST_F(memory_leak_detector_test, 
+    end__should_not_report_failure__if_not_leaking_and_test_has_no_assertion_failures)
+{
+    GivenFailCallbackSet();
+
+    auto descriptor = []() { return std::string("some_test"); };
+    sut.Start(descriptor);
+    sut.End(descriptor, true); // true: passed
+    
+    EXPECT_EQ(fail_count, 0u);
+}
+
+TEST_F(memory_leak_detector_test,
+    end__should_not_report_failure__if_leaking_but_test_has_assertion_failures)
+{
+    GivenFailCallbackSet();
+
+    auto descriptor = []() { return std::string("some_test"); };
+    sut.Start(descriptor);
+    auto* ptr = malloc(64);
+    sut.End(descriptor, false); // false: not passed
+    free(ptr); // cleanup
+
+    EXPECT_EQ(fail_count, 0u);
+}
+
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
+TEST_F(memory_leak_detector_test,
+    end__should_report_failure__if_leaking_and_test_has_no_assertion_failures)
+{
+    GivenFailCallbackSet();
+
+    auto test_case = []() { return malloc(64); };
+
+    auto descriptor = []() { return std::string("some_test"); };
+    sut.Start(descriptor);
+    auto* ptr = test_case();
+    sut.End(descriptor, true);          // true: passed
+    free(ptr);                          // cleanup
+
+    ASSERT_EQ(fail_count, 1u);
+    EXPECT_GT(alloc_no, 0);             // weak
+    EXPECT_EQ(line, unsigned long(-1)); // no line
+    EXPECT_STREQ(file.c_str(), "");     // first run, no trace info
+    EXPECT_STREQ(trace.c_str(), "");    // first run, no trace info
+}
+
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
+unsigned long leaking_test_case_line = 0;
+unsigned long test_line = 0;
+
+__declspec(noinline) void* leaking_test_case(size_t size_bytes)
+{
+    leaking_test_case_line = unsigned long(__LINE__) + 1;
+    auto* ptr = malloc(size_bytes);
+    return ptr;
+}
+
+inline std::string make_trace_line(const std::string& file, unsigned long line, const std::string& function)
+{
+    return "- " + file + " (" + std::to_string(line) + "): " + function + "\n";
+}
+
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
+// TODO This is causing trouble when run with CTest (FIX and uncomment)
+TEST_F(memory_leak_detector_test,
+    end__should_report_trace__if_leaking_and_test_has_no_assertion_failures_and_database_have_already_been_populated)
+{
+    GivenFailCallbackSet();
+
+    auto descriptor = []() { return std::string("some_test"); };
+    sut.Start(descriptor);
+    auto* ptr = leaking_test_case(64);
+    sut.End(descriptor, true);          // true: passed
+    free(ptr);                          // cleanup
+
+    // Rerun to obtain stack trace
+    Reset();
+    sut.Start(descriptor);
+    test_line = unsigned long(__LINE__) + 1;
+    ptr = leaking_test_case(64);
+    sut.End(descriptor, true);          // true: passed
+    free(ptr);                          // cleanup
+
+    std::string expected_trace = 
+        make_trace_line(this_file, leaking_test_case_line, "leaking_test_case") +
+        make_trace_line(this_file, test_line, __FUNCTION__);
+
+    ASSERT_EQ(fail_count, 1u);
+    EXPECT_GT(alloc_no, 0);                                 // weak
+    EXPECT_EQ(line, leaking_test_case_line);                // test case line no
+    EXPECT_STREQ(file.c_str(), this_file.c_str());          // first run, no trace info
+    EXPECT_STREQ(trace.c_str(), expected_trace.c_str());    // first run, no trace info
+}
+
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
