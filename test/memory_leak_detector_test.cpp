@@ -19,30 +19,13 @@ class memory_leak_detector_test : public ::testing::Test
 public:
     memory_leak_detector_test()
         : sut(1, argv)
-    {
-
-    }
+    { }
 
     virtual ~memory_leak_detector_test() noexcept = default;
     memory_leak_detector_test(const memory_leak_detector_test&) = delete;
     memory_leak_detector_test& operator=(const memory_leak_detector_test&) = delete;
     memory_leak_detector_test(memory_leak_detector_test&&) = delete;
     memory_leak_detector_test& operator=(memory_leak_detector_test&&) = delete;
-
-    static void SetUpTestCase()
-    {
-        //std::transform(this_file.begin(), this_file.end(), this_file.begin(),
-        //    [](char c) { return static_cast<char>(std::tolower(c)); });
-    }
-
-    void SetUp() override
-    {
-    }
-
-    void TearDown() override
-    {
-
-    }
 
     void Fail(long leak_alloc_no,
         const char* leak_file,

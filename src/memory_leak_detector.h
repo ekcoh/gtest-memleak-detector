@@ -40,8 +40,15 @@ namespace gtest_memleak_detector {
 struct Buffer
 {
     char  data[GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH]{ 0 };
-    char* last = nullptr;
-    char* end = nullptr;
+    char* last = data;
+    char* end = data + GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH;
+
+    inline void Clear() noexcept
+    {
+        data[0] = 0;
+        last = data;
+        end = data + GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH;
+    }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -54,6 +61,12 @@ struct Location
         static_cast<unsigned long>(-1);
     char            file[GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH]{ 0 };
     unsigned long   line = invalid_line;
+
+    inline void Clear() noexcept
+    {
+        file[0] = 0;
+        line = invalid_line;
+    }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -67,9 +80,9 @@ private:
     
     enum class State
     {
-        Pre,
-        Active,
-        Post
+        Scanning,
+        Capture,
+        Completed
     };
 public:
     StackTrace(Buffer* buffer, Location* location, const char* hook_file);

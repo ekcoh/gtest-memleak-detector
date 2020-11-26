@@ -22,6 +22,8 @@ option(${PROJECT_NAME_UCASE}_BUILD_TESTS
 	"If enabled, compile the tests." ON)
 option(${PROJECT_NAME_UCASE}_BUILD_EXAMPLES 
 	"If enabled, compile the examples." ON)
+option(${PROJECT_NAME_UCASE}_ADD_EXAMPLE_TESTS 
+	"If enabled, adds the example tests as part of CTest suite." OFF)
 option(${PROJECT_NAME_UCASE}_DOWNLOAD_DEPENDENCIES 
 	"If enabled, download dependencies." ON)
 

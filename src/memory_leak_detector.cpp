@@ -237,7 +237,8 @@ void gtest_memleak_detector::MemoryLeakDetector::WriteDatabase()
 
 #ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 
-extern "C" int AllocHook(
+// Unlikely name be found elsewhere
+extern "C" int GTestMemoryLeakDetector4ll0c470rh00k(
     int nAllocType, void* pvData,
     size_t nSize, int nBlockUse, long lRequest,
     const unsigned char* szFileName, int nLine) noexcept
@@ -280,7 +281,7 @@ void gtest_memleak_detector::MemoryLeakDetector::SetAllocHook()
 {
 #ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
     assert(alloc_hook_set_ == false);
-    stored_alloc_hook = _CrtSetAllocHook(AllocHook);
+    stored_alloc_hook = _CrtSetAllocHook(GTestMemoryLeakDetector4ll0c470rh00k);
     alloc_hook_set_ = true;
 #endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 }
@@ -308,6 +309,10 @@ void gtest_memleak_detector::MemoryLeakDetector::Start(
     state.buffer_ptr = &buffer;
     state.location_ptr = &location;
 
+    // Reset internals
+    buffer.Clear();
+    location.Clear();
+
     // Hook directly so we can count number of allocations from this function
     // as well since it will offset recorded allocation request indices.
     SetAllocHook();
@@ -323,13 +328,6 @@ void gtest_memleak_detector::MemoryLeakDetector::Start(
     if (kvp_it != db_.end())
         state.break_alloc = kvp_it->second;
     
-    // Reset internals
-    memset(buffer.data, 0, sizeof(sizeof(buffer) / sizeof(char)));
-    buffer.last = buffer.data;
-    buffer.end = buffer.data + GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH;
-    location.file[0] = 0;
-    location.line = Location::invalid_line;
-
     //pointers.buffer_ptr[0] = 0;
     //pointers.filename_ptr[0] = 0;
 

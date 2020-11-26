@@ -12,7 +12,7 @@ gtest_memleak_detector::StackTrace::StackTrace(
     , buffer(buffer)
     , location(location)
     , hook_file(hook_file)
-    , state(State::Pre)
+    , state(State::Scanning)
     , suppress(true)
 { 
     assert(buffer);
@@ -36,21 +36,23 @@ void gtest_memleak_detector::StackTrace::Copy(char* dst, const char* src) noexce
 bool gtest_memleak_detector::StackTrace::Filter(const CallstackEntry& entry) noexcept
 {
     // Provide some custom VC filtering to prettify stacktrace
+    auto filter = false;
     if (entry.undName[0] != 0)
     {
-        if (entry.lineFileName[0] == 0)
+        if (strcmp(entry.undName, "operator new") == 0)
+            filter = true;
+        else if (entry.lineFileName[0] == 0)
         {
             if (strcmp(entry.undName, "calloc_base") == 0)
-                return true;
-            if (strcmp(entry.undName, "malloc_dbg") == 0)
-                return true;
-            if (strcmp(entry.undName, "malloc") == 0)
-                return true;
+                filter = true;
+            else if (strcmp(entry.undName, "malloc_dbg") == 0)
+                filter = true;
+            else if (strcmp(entry.undName, "malloc") == 0)
+                filter = true;
         }
-        if (strcmp(entry.undName, "operator new") == 0)
-            return true;
+        
     }
-    return false;
+    return filter;
 }
 
 void gtest_memleak_detector::StackTrace::Format(CallstackEntry& entry)
@@ -97,21 +99,24 @@ void gtest_memleak_detector::StackTrace::OnCallstackEntry(CallstackEntryType eTy
 
     switch (state)
     {
-    case State::Pre:
+    case State::Scanning:
         // First stack trace hit of relevance is AllocHook
-        if (_stricmp(entry.lineFileName, hook_file) == 0)
-            state = State::Active;
+        if (entry.undName[0] != 0 &&
+            strcmp(entry.undName, "GTestMemoryLeakDetector4ll0c470rh00k") == 0)
+        {
+            state = State::Capture;
+        }
         break;
-    case State::Post:
-        break;
-    case State::Active:
+
+    case State::Capture:
         if (entry.undName[0] != 0)
         {
             if (Filter(entry))
                 return;
 
             // Store first stack trace row as origin
-            if (location->line == Location::invalid_line && entry.lineFileName[0] != 0)
+            if (location->line == Location::invalid_line && 
+                entry.lineFileName[0] != 0)
             {
                 strncpy_s(location->file, max_path,
                     entry.lineFileName, max_path - 1);
@@ -119,14 +124,17 @@ void gtest_memleak_detector::StackTrace::OnCallstackEntry(CallstackEntryType eTy
                 location->line = entry.lineNumber;
             }
 
-            // Truncate end of stack trace based on hitting test
+            // Truncate end of stack trace based on hitting test function body
             const auto len = strlen(entry.undName);
             const auto end = entry.undName + len - 10;
             if (len >= 10 && memcmp(end, "::TestBody", 10) == 0)
-                state = State::Post;
+                state = State::Completed;
         }
 
         Format(entry);
+        break;
+
+    case State::Completed:
         break;
 
     default:

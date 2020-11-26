@@ -8,19 +8,15 @@ add_executable(${PROJECT_NAME}_example_01_getting_started
 
 target_link_libraries(${PROJECT_NAME}_example_01_getting_started
 	PRIVATE ${PROJECT_NAME}
-)
-
-target_link_libraries(${PROJECT_NAME}_example_01_getting_started
 	PRIVATE gtest_main
 )
 
-option(${PROJECT_NAME_UCASE}_ADD_EXAMPLE_TESTS 
-	"If enabled, adds the example tests as part of CTest suite." OFF)
-
 if (${PROJECT_NAME_UCASE}_ADD_EXAMPLE_TESTS)
     enable_testing()
-    add_test(NAME ${PROJECT_NAME}_example_01_getting_started 
+    #gtest_discover_tests(${PROJECT_NAME}_example_01_getting_started)
+	add_test(NAME ${PROJECT_NAME}_example_01_getting_started 
 	    COMMAND ${PROJECT_NAME}_example_01_getting_started
     )
+	
 endif()
 
