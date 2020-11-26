@@ -28,7 +28,8 @@ Google Test and StackWalker available to the build.
 
 ## Getting started
 To start using the memory leak detector, simply add the project as a sub-directory 
-to your existing CMake project. Then, include the gtest_memleak_detector header:
+to your existing CMake project and as a dependency to your test binary via `target_link_libraries()`. 
+Finally, include the gtest_memleak_detector header in your Google Test main file as illustrated below:
 
 ```cpp
 #include <gtest_memleak_detector/gtest_memleak_detector.h>  // Include memory leak detector
@@ -63,12 +64,15 @@ int main(int argc, char **argv)
 GTEST_MEMLEAK_DETECTOR_MAIN
 ```
 
+No changes are required to existing test code except changes explained above.
+
 A complete example of the basic setup can be found in 
 [example/01_getting_started](example/01_getting_started).
 
 ## Known Limitations
-- It would make sense to make memory leak suppression in case of failed assertions optional,
-  but at the time being it is mandatory since GTest allocates memory during assertion failures.
+- It would make sense to make memory leak suppression in case of failed assertion optional,
+  but it has to be suppressed since GTest allocates memory during assertion failures and
+  this would otherwise be reported as a false positive.
 - Only ANSI filenames are currently supported. This means that proper UNICODE support is currently missing.
 - Leaks caused by alternative memory allocation functions, e.g. HeapAlloc in WINAPI, will not be reported since this is not supported by CRTDBG.
 
