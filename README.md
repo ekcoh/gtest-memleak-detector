@@ -8,17 +8,20 @@ Currently only works with MSVC tool-chain using
 ## Features
 - Automatic memory leak detection in test cases for code exercised within test case function.
 - Memory leak reporting as Google Test failures so that tests fail if a leak is detected.
-- Memory leak suppression so that memory leaks are not reported if the test fail due to failed assertion.
-- Rerunning a failed test will provide stack-trace for the origin of the allocation causing the leak.
+- Automatic memory leak report suppression so that memory leaks are not reported if the test fail due to a more severe failed assertion.
+- Rerunning a failed test will provide a filtered stack-trace for the origin of the allocation causing the leak.
 - Coexistence support for other CRTDBG allocation hooks and reporting hooks to be installed at the same time.
 - Support for leak detection via malloc, realloc, new (Same as CRTDBG supports).
 - If the code exercised by a test case has multiple leaks, only the first leak is reported.
 
 ## Requirements
-The project depends on the open source [Google Test](https://github.com/google/googletest) project. 
-Google Test dependency is managed via FetchContent (requires CMake 3.11+) which means that if a 
-parent project already includes it that version will be used. If not, this project will fetch it
-from GitHub.
+The project depends on the open source [Google Test](https://github.com/google/googletest) and
+[StackWalker](https://github.com/JochenKalmbach/StackWalker) projects. 
+Dependencies are managed via CMake FetchContent (requires CMake 3.11+) which means that if a 
+parent project already includes it that version will be used instead of predefined versions. 
+By default, this project will fetch dependencies automatically from GitHub if 
+GTEST_MEMLEAK_DETECTOR_DOWNLOAD_DEPENDENCIES is ON (default). If GTEST_MEMLEAK_DETECTOR_DOWNLOAD_DEPENDENCIES
+is OFF, you have to manually make Google Test and StackWalker available.
 
 ## Getting started
 To start using the memory leak detector, simply add the project as a sub-directory 
@@ -58,7 +61,18 @@ GTEST_MEMLEAK_DETECTOR_MAIN
 ```
 
 A complete example of the basic setup can be found in 
-[example/01_getting_started](example/01_getting_started)
+[example/01_getting_started](example/01_getting_started).
+
+## CMake Options
+
+The following CMake options are supported:
+
+Option                                        | Default Value | Description
+--------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------
+GTEST_MEMLEAK_DETECTOR_BUILD_TESTS            | ON            | If `ON`, builds the verification test binaries and adds them as part of the CTest test suite. 
+GTEST_MEMLEAK_DETECTOR_BUILD_EXAMPLES         | ON            | If `ON`, builds the example test binaries.
+GTEST_MEMLEAK_DETECTOR_ADD_EXAMPLE_TESTS      | OFF           | If `ON`, includes example tests (some intentionally failing) as part of the CTest test suite. 
+GTEST_MEMLEAK_DETECTOR_DOWNLOAD_DEPENDENCIES  | ON            | If `ON`, automatically fetches online third-party dependencies.
 
 ## Known Limitations
 - It would make sense to make memory leak suppression in case of failed assertions optional,
