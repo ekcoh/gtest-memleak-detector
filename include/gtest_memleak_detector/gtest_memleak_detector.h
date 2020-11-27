@@ -15,19 +15,19 @@
 #ifndef GTEST_MEMLEAK_DETECTOR_H
 #define GTEST_MEMLEAK_DETECTOR_H
 
-#pragma warning(push)
-#pragma warning(disable: 26812)
-#pragma warning(disable: 26495) // MSVC C26495: unitialized variable
-#include <gtest/gtest.h> // Google Test
-#pragma warning(pop)
+#include <memory>               // std::unique_ptr
 
-#include <memory>        // std::unique_ptr
+#pragma warning(push)
+#pragma warning(disable: 26812) // MSVC C26812: unscoped enum
+#pragma warning(disable: 26495) // MSVC C26495: unitialized variable
+#include <gtest/gtest.h>        // Google Test
+#pragma warning(pop)
 
 // Memory debugging tools (MSVC only)
 #if defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
 #define GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 #define GTEST_MEMLEAK_DETECTOR_CRTDBG_AVAILABLE
-#endif // defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
+#endif
 
 #define GTEST_MEMLEAK_DETECTOR_APPEND_LISTENER \
   ::testing::UnitTest::GetInstance()->listeners().Append( \
@@ -86,13 +86,6 @@ public:
 	static std::string MakeDatabaseFilePath(const char* binary_file_path);
 
 private:
-    //static std::string DescribeTest(const ::testing::TestInfo& test_info);
-    
-  //  static void FailCurrentTest(long leak_alloc_no, 
-		//const char* leak_file, 
-		//unsigned long leak_line, 
-		//const char* leak_trace);
-
 	std::unique_ptr<MemoryLeakDetector> impl_;
 };
 
