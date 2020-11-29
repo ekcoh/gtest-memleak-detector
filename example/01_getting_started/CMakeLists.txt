@@ -2,6 +2,8 @@
 # This file is subject to the license terms in the LICENSE file 
 # found in the root directory of this distribution.
 
+include(GoogleTest)
+
 add_executable(${PROJECT_NAME}_example_01_getting_started
 	"main.cpp"
 )
@@ -14,11 +16,7 @@ target_link_libraries(${PROJECT_NAME}_example_01_getting_started
 
 if (${PROJECT_NAME_UCASE}_ADD_EXAMPLE_TESTS)
     enable_testing()
-    # TODO Issue with gtest_discover_tests, unclear why
-	#gtest_discover_tests(${PROJECT_NAME}_example_01_getting_started)
-	add_test(NAME ${PROJECT_NAME}_example_01_getting_started 
-	    COMMAND ${PROJECT_NAME}_example_01_getting_started
-    )
+	gtest_discover_tests(${PROJECT_NAME}_example_01_getting_started)
 	
 endif()
 

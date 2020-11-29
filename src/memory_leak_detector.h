@@ -33,9 +33,14 @@
 #include <unordered_map> // std::unordered_map
 #include <sstream>       // std::stringstream
 
+// Internal debugging:
 // Uncomment to debug during development of this library
 // Note that a fixed memory buffer is used and size might need adjustment
 // #define GTEST_MEMLEAK_DETECTOR_DEBUG
+
+// Internal debugging:
+// Uncomment below to trace allocation hook callbacks
+// #define GTEST_MEMLEAK_DETECTOR_DEBUG_TRACE_ALLOC
 
 #ifdef GTEST_MEMLEAK_DETECTOR_DEBUG
 #define GTEST_MEMLEAK_DETECTOR_DEBUG_BUFFER_SIZE_BYTES 640000
@@ -113,6 +118,11 @@ class MemoryLeakDetector
 public:
     static constexpr long no_break_alloc = -1;
 
+#ifdef GTEST_MEMLEAK_DETECTOR_DEBUG
+    static constexpr size_t debug_buffer_size =
+        GTEST_MEMLEAK_DETECTOR_DEBUG_BUFFER_SIZE_BYTES;
+#endif
+
     using FailureCallback = std::function<void(
         long leak_alloc_no,
         const char* leak_file,
@@ -129,9 +139,6 @@ public:
         bool discard = false;
 
 #ifdef GTEST_MEMLEAK_DETECTOR_DEBUG
-        static constexpr size_t debug_buffer_size =
-            GTEST_MEMLEAK_DETECTOR_DEBUG_BUFFER_SIZE_BYTES;
-
         char debug_buffer[debug_buffer_size]{ 0 };
         size_t debug_buffer_length = 0;
         size_t debug_buffer_truncated = 0;
@@ -169,10 +176,10 @@ public:
 
 #ifdef GTEST_MEMLEAK_DETECTOR_DEBUG
 
-    bool DebugBufferFull()
+    /*bool DebugBufferFull()
     {
         return state_.debug_buffer_length >= debug_buffer_size - 1;
-    }
+    }*/
 
     template<size_t N, class... Args>
     void Log(const char(&fmt)[N], Args&&... args)

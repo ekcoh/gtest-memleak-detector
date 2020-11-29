@@ -395,7 +395,7 @@ void gtest_memleak_detector::MemoryLeakDetector::OnAllocation(
             break;
         GTEST_MEMLEAK_DETECTOR_DBGLOG("# alloc_no: %ld, relative_no: %ld\n", 
             alloc_no, alloc_no - gtest_memleak_detector::MemoryLeakDetector::state_.pre_alloc_no);
-#ifdef GTEST_MEMLEAK_DETECTOR_DEBUG
+#if defined(GTEST_MEMLEAK_DETECTOR_DEBUG) && defined(GTEST_MEMLEAK_DETECTOR_DEBUG_TRACE_ALLOC)
         LogStackTrace();
 #endif
         if (lRequest == state_.break_alloc)
