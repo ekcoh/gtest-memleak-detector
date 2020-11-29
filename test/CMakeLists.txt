@@ -31,9 +31,6 @@ target_compile_options(${PROJECT_NAME}_unit_tests
 	PRIVATE /FC # Full Path of Source Code File in Diagnostics
 )
 gtest_discover_tests(${PROJECT_NAME}_unit_tests)
-	# XML_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
-#add_test(NAME ${PROJECT_NAME}_unit_tests COMMAND ${PROJECT_NAME}_unit_tests )
-#gtest_discover_tests(${PROJECT_NAME}_unit_tests)
 
 ###################################################################################################
 # CRTDBG Coexistence tests to verify detector is operational if other CRTDBG hooks are active
@@ -49,4 +46,3 @@ target_link_libraries(${PROJECT_NAME}_coexistence_tests
 	PUBLIC gtest
 )
 gtest_discover_tests(${PROJECT_NAME}_coexistence_tests)
-#add_test(NAME ${PROJECT_NAME}_coexistence_tests COMMAND ${PROJECT_NAME}_coexistence_tests )
