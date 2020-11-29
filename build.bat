@@ -5,13 +5,15 @@
 @rem Build script for building with MSVC in Windows environment
 @rem 
 @rem Preconditions:
-@rem - The environment has already been setup, i.e. VC variables set
+@rem - The environment has already been setup, i.e. VC variables set, e.g.
+@rem   run for Visual Studio 2017 from cmd: 
+@rem   "E:\Program\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
 @rem - CMake is available
 @rem - Ninja is available
 
 :: Main build flow
 @setlocal
-@set binary_dir="build/x64-release"
+@set binary_dir="build/x64-debug"
 @if not exist %binary_dir% mkdir %binary_dir%
 @set starttime=%TIME%
 @rem echo Build start time: %starttime%
@@ -24,14 +26,21 @@
 @if %errorlevel% neq 0 @echo. && @echo Build failed. && @exit /B #%errorlevel%
 @goto done
 
+:: Make directory
+:chdir_build
+@set binary_dir="build/x64-debug"
+@if not exist %binary_dir% mkdir %binary_dir%
+@pushd %binary_dir%
+
 :: Run CMake generator
 :generate
-cmake -G "Ninja" ../.. -DCMAKE_VERBOSE_MAKEFILE=OFF
+cmake -G "Ninja" ../.. -DCMAKE_VERBOSE_MAKEFILE=OFF -DBUILD_SHARED_LIBS=OFF
 @exit /B #%errorlevel%
 
 :: Run CMake build
+:: Note that Debug is default target since tool is useless in Release mode
 :build
-cmake --build . --config Release --target all 
+cmake --build . --config Debug --target all 
 @exit /B #%errorlevel%
 
 :: Run CTest

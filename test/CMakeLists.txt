@@ -10,45 +10,34 @@ include(GoogleTest)
 enable_testing()
 
 ###################################################################################################
-# Download and unpack Google Test at configure time if not already available.
-# If made available by parent project use that version and configuration instead.
-# Git name used as FetchContent package name.
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        release-1.10.0
-)
-FetchContent_GetProperties(googletest)
-if(NOT googletest_POPULATED)
-  FetchContent_Populate(googletest)
-  if (WIN32)
-    # Prevent overriding the parent project's compiler/linker settings on Windows
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  endif()
-  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
-endif()
-
-###################################################################################################
 # Unit tests
 add_executable(${PROJECT_NAME}_unit_tests
 	main.cpp
-	memory_leak_detector_test.cpp
-	memory_leak_detector_assertion_tests.cpp
+	memory_leak_detector_listener_test.cpp
+	memory_leak_detector_listener_assertion_test.cpp
+    memory_leak_detector_test.cpp
 )
 gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME}_unit_tests)
 target_link_libraries(${PROJECT_NAME}_unit_tests
 	PRIVATE ${PROJECT_NAME}
+    PRIVATE StackWalker
 	PUBLIC gtest
 )
-add_test(NAME ${PROJECT_NAME}_unit_tests COMMAND ${PROJECT_NAME}_unit_tests )
-#gtest_discover_tests(${PROJECT_NAME}_unit_tests)
+target_include_directories(${PROJECT_NAME}_unit_tests
+    PRIVATE "../src"
+    PRIVATE ${stackwalker_SOURCE_DIR}/Main # Incorrectly setup by StackWalker CMake
+)
+target_compile_options(${PROJECT_NAME}_unit_tests
+	PRIVATE /FC # Full Path of Source Code File in Diagnostics
+)
+gtest_discover_tests(${PROJECT_NAME}_unit_tests)
 
 ###################################################################################################
 # CRTDBG Coexistence tests to verify detector is operational if other CRTDBG hooks are active
 add_executable(${PROJECT_NAME}_coexistence_tests
 	main.cpp
-	memory_leak_detector_test.cpp
-	memory_leak_detector_crtdbg_coexistence_test.cpp
+	memory_leak_detector_listener_test.cpp
+	memory_leak_detector_listener_coexistence_test.cpp
 )
 gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME}_coexistence_tests)
 add_definitions(-DINCLUDE_CRT)
@@ -56,5 +45,4 @@ target_link_libraries(${PROJECT_NAME}_coexistence_tests
 	PRIVATE ${PROJECT_NAME}
 	PUBLIC gtest
 )
-add_test(NAME ${PROJECT_NAME}_coexistence_tests COMMAND ${PROJECT_NAME}_coexistence_tests )
-#gtest_discover_tests(${PROJECT_NAME}_coexistence_tests)
+gtest_discover_tests(${PROJECT_NAME}_coexistence_tests)

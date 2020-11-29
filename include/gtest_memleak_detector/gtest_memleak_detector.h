@@ -15,8 +15,19 @@
 #ifndef GTEST_MEMLEAK_DETECTOR_H
 #define GTEST_MEMLEAK_DETECTOR_H
 
-#include <gtest/gtest.h> // Google Test
-#include <memory>        // std::unique_ptr
+#include <memory>               // std::unique_ptr
+
+#pragma warning(push)
+#pragma warning(disable: 26812) // MSVC C26812: unscoped enum
+#pragma warning(disable: 26495) // MSVC C26495: unitialized variable
+#include <gtest/gtest.h>        // Google Test
+#pragma warning(pop)
+
+// Memory debugging tools (MSVC only)
+#if defined(_DEBUG) && defined(_MSC_VER) && defined(_WIN32)
+#define GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+#define GTEST_MEMLEAK_DETECTOR_CRTDBG_AVAILABLE
+#endif
 
 #define GTEST_MEMLEAK_DETECTOR_APPEND_LISTENER \
   ::testing::UnitTest::GetInstance()->listeners().Append( \
@@ -37,22 +48,34 @@ namespace gtest_memleak_detector {
 // MemoryLeakDetectorListener
 ///////////////////////////////////////////////////////////////////////////////
 
+class MemoryLeakDetector;
+
 class MemoryLeakDetectorListener : public ::testing::EmptyTestEventListener {
 public:
 	MemoryLeakDetectorListener(int argc = 0, char** argv = nullptr);
-	virtual ~MemoryLeakDetectorListener();
+	virtual ~MemoryLeakDetectorListener() noexcept;
 
-	virtual void OnTestProgramStart(
+	MemoryLeakDetectorListener(const MemoryLeakDetectorListener&) = delete;
+	MemoryLeakDetectorListener(MemoryLeakDetectorListener&&) = delete;
+
+	MemoryLeakDetectorListener& operator=(
+		const MemoryLeakDetectorListener&) = delete;
+	MemoryLeakDetectorListener& operator=(
+		MemoryLeakDetectorListener&&) = delete;
+
+	void OnTestProgramStart(
 		const ::testing::UnitTest& unit_test) override;
-	virtual void OnTestStart(
+	void OnTestStart(
 		const ::testing::TestInfo& test_info) override;
-	virtual void OnTestEnd(
+	void OnTestEnd(
 		const ::testing::TestInfo& test_info) override;
-	virtual void OnTestProgramEnd(
+	void OnTestProgramEnd(
 		const ::testing::UnitTest& unit_test) override;
+
+	static std::string MakeDatabaseFilePath(const char* binary_file_path);
+
 private:
-	class Impl;
-	std::unique_ptr<Impl> impl_; 
+	std::unique_ptr<MemoryLeakDetector> impl_;
 };
 
 } // namespace gtest_memleak_detector
