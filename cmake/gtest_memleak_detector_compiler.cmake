@@ -4,8 +4,8 @@ function(gtest_memleak_detector_apply_compiler_settings GTEST_MEMLEAK_DETECTOR_T
 	    # cl : Command line warning D9025 : overriding '/W3' with '/W4'.  Since this is
 	    # a command line warning and not a compiler warning, it cannot be suppressed except
 	    # by fixing the command line.
-	    string(REGEX REPLACE " /W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-	    string(REGEX REPLACE " /W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	    #string(REGEX REPLACE " /W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+	    #string(REGEX REPLACE " /W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	    target_compile_options(${GTEST_MEMLEAK_DETECTOR_TARGET} PRIVATE /Wall /WX)
         target_compile_options(${GTEST_MEMLEAK_DETECTOR_TARGET} PRIVATE 
             /wd4514 # unreferenced inline function has been removed

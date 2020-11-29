@@ -42,16 +42,6 @@ int main(int argc, char **argv) \
   return RUN_ALL_TESTS(); \
 }
 
-// Have a max limit on stack trace size to avoid allocating memory as part
-// of generating stack trace. Size is in bytes and includes null-termination.
-#ifndef GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH 
-#define GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH 4096 * 4
-#endif // GTEST_MEMLEAK_DETECTOR_STACKTRACE_MAX_LENGTH
-
-#ifndef GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH
-#define GTEST_MEMLEAK_DETECTOR_PATH_MAX_LENGTH 1024
-#endif
-
 namespace gtest_memleak_detector { 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -82,7 +72,6 @@ public:
 	void OnTestProgramEnd(
 		const ::testing::UnitTest& unit_test) override;
 
-    // Mainly exposed for verification convenience purposes (stateless)
 	static std::string MakeDatabaseFilePath(const char* binary_file_path);
 
 private:

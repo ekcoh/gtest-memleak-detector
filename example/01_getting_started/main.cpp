@@ -17,25 +17,19 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#pragma warning( push )
+#pragma warning( disable : 5039 ) 
 #include <Windows.h>
+#pragma warning( pop )
 #endif
 
-// Disable warnings (and avoid checks), for simplicity of example
+// Disable warnings (and avoid below checks), for simplicity of example
 #pragma warning(disable: 6011) // warning C6011: dereferencing NULL pointer
 #pragma warning(disable: 6308) // warning C6308: realloc might return null pointer
 
 // This is typically defined in its own file, but defined here to reduce complexity of example
 int main(int argc, char **argv)
 {
-    // --gtest_filter=example_01_memory_leak_detection.forgetting_to_cleanup_allocation_with_malloc_will_leak_memory
-    // --gtest_filter=example_01_memory_leak_detection.forgetting_to_cleanup_allocation_with_new_will_leak_memory:example_01_memory_leak_detection.forgetting_to_cleanup_allocation_with_malloc_will_leak_memory
-
-    for (int i = 0; i < argc; ++i)
-    {
-        const char* arg = argv[i];
-        std::cout << i << ":" << argv[i] << "\n";
-    }
-
 	::testing::InitGoogleTest(&argc, argv);
 	::testing::UnitTest::GetInstance()->listeners().Append(
 		new gtest_memleak_detector::MemoryLeakDetectorListener(argc, argv));
@@ -94,7 +88,9 @@ TEST(example_01_memory_leak_detection,
 {
     // ptr is never deallocated and will leak
     // (memory leak reported)
+    //fprintf(stderr, "Pre call\n");
     auto ptr = call();
+    //fprintf(stderr, "Post call\n");
     EXPECT_EQ(*ptr, 5);
 }
 
@@ -103,6 +99,7 @@ TEST(example_01_memory_leak_detection,
 {
     // ptr is never freed and will leak
     // (memory leak reported)
+    
 	auto ptr = static_cast<int*>(malloc(sizeof(int)));
 	*ptr = 5;
 	EXPECT_EQ(*ptr, 5);

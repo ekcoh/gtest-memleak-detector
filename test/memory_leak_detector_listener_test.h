@@ -31,7 +31,7 @@ public:
 
     void GivenPreTestSequence();
     void GivenPostTestSequence(expected_outcome action, 
-        const char* failure_message = "Memory leak detected.");
+        const char* failure_message = "Memory leak detected");
 
 protected:
     MemoryLeakDetectorListener detector;

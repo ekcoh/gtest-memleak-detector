@@ -1,4 +1,8 @@
 #include <gtest_memleak_detector/gtest_memleak_detector.h>
+// Copyright(C) 2019 - 2020 Håkan Sidenvall <ekcoh.git@gmail.com>.
+// This file is subject to the license terms in the LICENSE file 
+// found in the root directory of this distribution.
+
 #include <memory_leak_detector.h>
 
 #include <algorithm>
@@ -66,16 +70,20 @@ public:
 };
 
 #define GTEST_MEMLEAK_DETECTOR_LEAK_MSG_PART \
-    "Memory leak detected."
+    "Memory leak detected"
 #define GTEST_MEMLEAK_DETECTOR_REQUEST_MSG_PART \
-    "\n- Allocation request no: "
-#define GTEST_MEMLEAK_DETECTOR_ORIGIN_MSG_PART \
-    "\n- Origin: "
+    " (Request: "
+//#define GTEST_MEMLEAK_DETECTOR_ORIGIN_MSG_PART \
+//    "\n- Origin: "
 #define GTEST_MEMLEAK_DETECTOR_STACKTRACE_MSG_PART \
-    "\n\nStacktrace:\n"
+    ") at:\n"
 #define GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART \
-    "\n\n(Re-run the test again to obtain stack-trace for the allocation " \
-    "causing the memory-leak.)"
+    "Re-run test to obtain stack-trace of the allocation " \
+    "causing the memory leak."
+#define GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART_1 \
+    "). " GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART
+#define GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART_2 \
+    ". " GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART
 
 TEST_F(memory_leak_detector_test,
     make_database_file_path__should_return_same_path_with_additional_suffix__if_given_valid_string)
@@ -95,7 +103,7 @@ TEST_F(memory_leak_detector_test,
         1234, "somefile.cpp", 67, "stacktrace_data").c_str(),
         GTEST_MEMLEAK_DETECTOR_LEAK_MSG_PART
         GTEST_MEMLEAK_DETECTOR_REQUEST_MSG_PART "1234"
-        GTEST_MEMLEAK_DETECTOR_ORIGIN_MSG_PART "somefile.cpp: 67"
+  //      GTEST_MEMLEAK_DETECTOR_ORIGIN_MSG_PART "somefile.cpp: 67"
         GTEST_MEMLEAK_DETECTOR_STACKTRACE_MSG_PART "stacktrace_data");
 }
 
@@ -106,8 +114,8 @@ TEST_F(memory_leak_detector_test,
         3456, "somefile.cpp", 51, nullptr).c_str(),
         GTEST_MEMLEAK_DETECTOR_LEAK_MSG_PART
         GTEST_MEMLEAK_DETECTOR_REQUEST_MSG_PART "3456"
-        GTEST_MEMLEAK_DETECTOR_ORIGIN_MSG_PART "somefile.cpp: 51"
-        GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART);
+        //GTEST_MEMLEAK_DETECTOR_ORIGIN_MSG_PART "somefile.cpp: 51"
+        GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART_1);
 }
 
 TEST_F(memory_leak_detector_test,
@@ -126,7 +134,7 @@ TEST_F(memory_leak_detector_test,
     EXPECT_STREQ(MemoryLeakDetector::MakeFailureMessage(3456, nullptr, 0, nullptr).c_str(),
         GTEST_MEMLEAK_DETECTOR_LEAK_MSG_PART
         GTEST_MEMLEAK_DETECTOR_REQUEST_MSG_PART "3456"
-        GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART);
+        GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART_1);
 }
 
 TEST_F(memory_leak_detector_test,
@@ -135,11 +143,11 @@ TEST_F(memory_leak_detector_test,
     EXPECT_STREQ(MemoryLeakDetector::MakeFailureMessage(
         -1, nullptr, 0, nullptr).c_str(),
         GTEST_MEMLEAK_DETECTOR_LEAK_MSG_PART
-        GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART);
+        GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART_2);
     EXPECT_STREQ(MemoryLeakDetector::MakeFailureMessage(
         -2, nullptr, 0, nullptr).c_str(),
         GTEST_MEMLEAK_DETECTOR_LEAK_MSG_PART
-        GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART);
+        GTEST_MEMLEAK_DETECTOR_RERUN_MESSAGE_PART_2);
 }
 
 TEST_F(memory_leak_detector_test, 

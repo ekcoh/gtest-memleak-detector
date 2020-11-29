@@ -23,8 +23,18 @@ void FailCurrentTest(
     const auto message = 
         gtest_memleak_detector::MemoryLeakDetector::MakeFailureMessage(
             leak_alloc_no, leak_file, leak_line, leak_trace);
-    GTEST_MESSAGE_AT_(leak_file, static_cast<int>(leak_line),
-        message.c_str(), ::testing::TestPartResult::kNonFatalFailure);
+    if (leak_file && leak_file[0] != 0)
+    {
+        GTEST_MESSAGE_AT_(leak_file, 
+            static_cast<int>(leak_line),
+            message.c_str(), 
+            ::testing::TestPartResult::kNonFatalFailure);
+    }
+    else
+    {
+        GTEST_MESSAGE_(message.c_str(), 
+            ::testing::TestPartResult::kNonFatalFailure);
+    }
 }
 
 std::string DescribeTest(
