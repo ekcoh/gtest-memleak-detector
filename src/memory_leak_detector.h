@@ -16,7 +16,14 @@
 #endif
 #pragma warning( disable : 5039 ) 
 #include <Windows.h>
+#ifdef _M_IX86
+#define GTEST_MEMLEAK_DETECTOR_M_IX86_DEFINED
+#undef _M_IX86 // x86-64 work-around for StackWalker x86 build problem
+#endif
 #include <StackWalker/StackWalker.h>
+#ifdef GTEST_MEMLEAK_DETECTOR_M_IX86_DEFINED
+#define _M_IX86 // restore
+#endif
 #pragma warning( pop )
 #ifdef GTEST_MEMLEAK_DETECTOR_WIN32_LEAN_AND_MEAN_DEFINED
 #undef WIN32_LEAN_AND_MEAN // cleanup
