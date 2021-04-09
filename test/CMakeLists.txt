@@ -28,7 +28,8 @@ target_include_directories(${PROJECT_NAME}_unit_tests
     PRIVATE ${stackwalker_SOURCE_DIR}/Main # Incorrectly setup by StackWalker CMake
 )
 target_compile_options(${PROJECT_NAME}_unit_tests
-	PRIVATE /FC # Full Path of Source Code File in Diagnostics
+	PRIVATE /FC     # Full Path of Source Code File in Diagnostics
+	PRIVATE /wd4711 # automatic inline expansion (optimized - Release)
 )
 gtest_discover_tests(${PROJECT_NAME}_unit_tests)
 
@@ -41,6 +42,9 @@ add_executable(${PROJECT_NAME}_coexistence_tests
 )
 gtest_memleak_detector_apply_compiler_settings(${PROJECT_NAME}_coexistence_tests)
 add_definitions(-DINCLUDE_CRT)
+target_compile_options(${PROJECT_NAME}_coexistence_tests
+    PRIVATE /wd4711 # automatic inline expansion (optimized - Release)
+)
 target_link_libraries(${PROJECT_NAME}_coexistence_tests
 	PRIVATE ${PROJECT_NAME}
 	PUBLIC gtest
