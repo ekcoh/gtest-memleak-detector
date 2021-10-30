@@ -12,7 +12,7 @@ include(FetchContent)
 include(cmake/gtest_memleak_detector_compiler.cmake)
 
 project(gtest_memleak_detector 
-    VERSION 0.1.0
+    VERSION 0.1.1
 	HOMEPAGE_URL https://github.com/ekcoh/gtest-memleak-detector.git
 	LANGUAGES CXX
 )
