@@ -12,6 +12,8 @@
 	"This is expected for non-debug builds, e.g. release build.")
 #endif
 
+#ifdef GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
+
 namespace {
 
 void FailCurrentTest(
@@ -58,6 +60,8 @@ std::string DescribeTest(
 }
 
 } // anonomous namespace
+
+#endif // GTEST_MEMLEAK_DETECTOR_IMPL_AVAILABLE
 
 gtest_memleak_detector::MemoryLeakDetectorListener::MemoryLeakDetectorListener(
     int argc, char** argv)
